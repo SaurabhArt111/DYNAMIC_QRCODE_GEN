@@ -1,0 +1,47 @@
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(140deg, #10201e, #1f2937 52%, #f6f7f4 52%);
+}
+
+.login-panel {
+  width: min(430px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 28px;
+  box-shadow: var(--shadow);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.login-panel h1 {
+  margin: 24px 0 8px;
+}
+
+.login-panel p {
+  margin: 0 0 20px;
+  color: var(--muted);
+}
+
+.login-panel .primary-button {
+  width: 100%;
+}
+
+.login-lock {
+  margin-top: 16px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}

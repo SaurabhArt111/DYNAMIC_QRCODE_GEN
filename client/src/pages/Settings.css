@@ -1,0 +1,25 @@
+.settings-panel {
+  width: min(540px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.settings-panel h2 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 18px;
+  font-size: 1.1rem;
+}
+
+.success-box {
+  background: #edfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+}

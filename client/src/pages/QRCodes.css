@@ -1,0 +1,133 @@
+.qr-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 190px auto;
+  gap: 10px;
+}
+
+.search-box {
+  min-height: 42px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.search-box input,
+.qr-toolbar select {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.qr-toolbar select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--surface);
+}
+
+.qr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.qr-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+  box-shadow: var(--shadow);
+}
+
+.qr-card strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.qr-card span,
+.qr-card p,
+.qr-card dt {
+  color: var(--muted);
+}
+
+.qr-card span {
+  word-break: break-all;
+  font-size: 0.78rem;
+}
+
+.qr-card p {
+  margin: 0;
+}
+
+.qr-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+.qr-card dd {
+  margin: 4px 0 0;
+  font-weight: 800;
+}
+
+@media (max-width: 700px) {
+  .qr-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bulk-guide {
+  display: grid;
+  gap: 14px;
+}
+
+.bulk-guide p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.bulk-guide table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: table;
+}
+
+.bulk-guide th,
+.bulk-guide td {
+  border: 1px solid var(--border);
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.bulk-guide th {
+  background: var(--surface-2);
+  font-size: 0.9rem;
+}
+
+.bulk-notes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bulk-notes span {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
