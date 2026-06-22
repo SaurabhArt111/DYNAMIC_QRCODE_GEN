@@ -78,6 +78,60 @@
   font-weight: 800;
 }
 
+.qr-card-skeleton {
+  min-height: 210px;
+  align-content: start;
+}
+
+.qr-card-skeleton span,
+.qr-card-skeleton p,
+.qr-card-skeleton dl div {
+  min-height: 18px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f1f5f3, #fff, #f1f5f3);
+  background-size: 220% 100%;
+  animation: qrSkeleton 1.15s ease-in-out infinite;
+}
+
+.qr-card-skeleton span {
+  width: 68%;
+}
+
+.qr-card-skeleton p {
+  width: 92%;
+}
+
+.qr-card-skeleton dl div {
+  min-height: 44px;
+}
+
+.small-spinner {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+.qr-empty {
+  grid-column: 1 / -1;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  color: var(--muted);
+  background: var(--surface);
+  text-align: center;
+  font-weight: 800;
+}
+
+@keyframes qrSkeleton {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
+}
+
 @media (max-width: 700px) {
   .qr-toolbar {
     grid-template-columns: 1fr;

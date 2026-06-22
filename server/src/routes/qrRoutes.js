@@ -186,6 +186,27 @@ router.post('/:id/files', requireAuth, qrUpload.array('files', 4), handleUploadE
   res.status(201).json({ uploads: docs });
 });
 
+router.put('/:id/files/reorder', requireAuth, async (req, res) => {
+  const qr = await QRCode.findById(req.params.id);
+  if (!qr || qr.status === 'deleted') return res.status(404).json({ message: 'QR not found.' });
+
+  const orderedIds = Array.isArray(req.body.uploadIds) ? req.body.uploadIds : [];
+  const uploads = await Upload.find({ qrCode: qr._id });
+  const uploadIds = uploads.map((upload) => String(upload._id));
+  const hasSameUploads = orderedIds.length === uploadIds.length && uploadIds.every((uploadId) => orderedIds.includes(uploadId));
+
+  if (!hasSameUploads) {
+    return res.status(400).json({ message: 'Upload order does not match the QR files.' });
+  }
+
+  await Promise.all(
+    orderedIds.map((uploadId, index) => Upload.updateOne({ _id: uploadId, qrCode: qr._id }, { order: index }))
+  );
+  await logActivity('FILES_UPDATED', qr._id, `Files reordered for ${qr.name}`);
+  const reordered = await Upload.find({ qrCode: qr._id }).sort({ order: 1 }).lean();
+  res.json({ uploads: reordered });
+});
+
 router.put('/:id/files/:uploadId/replace', requireAuth, qrUpload.single('file'), handleUploadErrors, async (req, res) => {
   const upload = await Upload.findOne({ _id: req.params.uploadId, qrCode: req.params.id });
   if (!upload) return res.status(404).json({ message: 'Upload not found.' });

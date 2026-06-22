@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Download, FileSpreadsheet, Plus, Search, Recycle, Trash,  } from 'lucide-react';
+import { Download, FileSpreadsheet, Plus, Search, Trash } from 'lucide-react';
 import { api } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
 import { formatBytes, formatDate } from '../utils/format.js';
@@ -12,6 +12,8 @@ export default function QRCodes() {
   const [modal, setModal] = useState(null);
   const [error, setError] = useState('');
   const [form, setForm] = useState({ name: '', description: '' });
+  const [loading, setLoading] = useState(true);
+  const [busyAction, setBusyAction] = useState('');
   const bulkInputRef = useRef(null);
 
   async function recycleQr(qrId) {
@@ -24,8 +26,13 @@ export default function QRCodes() {
   }
 
   async function load() {
-    const { data } = await api.get('/qrcodes', { params: query });
-    setItems(data.items);
+    setLoading(true);
+    try {
+      const { data } = await api.get('/qrcodes', { params: query });
+      setItems(data.items);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -34,13 +41,16 @@ export default function QRCodes() {
 
   async function createQr(event) {
     event.preventDefault();
+    setBusyAction('create');
     try {
       await api.post('/qrcodes', form);
       setForm({ name: '', description: '' });
       setModal(null);
-      load();
+      await load();
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to create QR.');
+    } finally {
+      setBusyAction('');
     }
   }
 
@@ -49,14 +59,16 @@ export default function QRCodes() {
     if (!file) return;
     const formData = new FormData();
     formData.append('file', file);
+    setBusyAction('bulk');
     try {
       await api.post('/qrcodes/bulk', formData);
       setModal(null);
       setError('');
-      load();
+      await load();
     } catch (err) {
       setError(err.response?.data?.message || 'Bulk generation failed.');
     } finally {
+      setBusyAction('');
       event.target.value = '';
     }
   }
@@ -84,13 +96,18 @@ export default function QRCodes() {
   }
 
   async function downloadQr(qr) {
-    const res = await api.get(`/qrcodes/${qr._id}/qr-image`, { responseType: 'blob' });
-    const url = URL.createObjectURL(res.data);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${qr.name}.png`;
-    link.click();
-    URL.revokeObjectURL(url);
+    setBusyAction(`download-${qr._id}`);
+    try {
+      const res = await api.get(`/qrcodes/${qr._id}/qr-image`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${qr.name}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setBusyAction('');
+    }
   }
 
   return (
@@ -129,10 +146,21 @@ export default function QRCodes() {
           <option value="edited">Last Edit</option>
           <option value="scanned">Last Scanned</option>
         </select>
-        <button className="secondary-button" onClick={load}>Search</button>
+        <button className="secondary-button" onClick={load} disabled={loading}><Search size={18} /> {loading ? 'Searching...' : 'Search'}</button>
       </div>
       <div className="qr-grid">
-        {items.map((qr) => (
+        {loading && Array.from({ length: 6 }).map((_, index) => (
+          <article className="qr-card qr-card-skeleton" key={index}>
+            <span />
+            <p />
+            <dl>
+              <div />
+              <div />
+              <div />
+            </dl>
+          </article>
+        ))}
+        {!loading && items.map((qr) => (
           <article className="qr-card" key={qr._id}>
             <div>
               <strong>{qr.name}</strong>
@@ -146,7 +174,9 @@ export default function QRCodes() {
             </dl>
             <div className="button-row">
               <Link className="primary-button" to={`/qrcodes/${qr._id}`}>Manage</Link>
-              <button className="icon-button" title="Download QR" onClick={() => downloadQr(qr)}><Download size={18} /></button>
+              <button className="icon-button" title="Download QR" onClick={() => downloadQr(qr)} disabled={busyAction === `download-${qr._id}`}>
+                {busyAction === `download-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
+              </button>
               <button className="icon-button" title="Recycle QR" onClick={() => {
                 if (window.confirm('Are you sure you want to recycle this QR?')) {
                   recycleQr(qr._id);
@@ -156,13 +186,14 @@ export default function QRCodes() {
             </div>
           </article>
         ))}
+        {!loading && !items.length && <div className="qr-empty">No QR codes found.</div>}
       </div>
       {modal === 'create' && (
         <Modal title="Create QR" onClose={() => setModal(null)}>
           <form onSubmit={createQr}>
             <div className="field"><label>QR Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
             <div className="field"><label>Description</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-            <button className="primary-button">Create</button>
+            <button className="primary-button" disabled={busyAction === 'create'}>{busyAction === 'create' ? 'Creating...' : 'Create'}</button>
           </form>
         </Modal>
       )}
@@ -183,7 +214,9 @@ export default function QRCodes() {
             </div>
             <div className="button-row">
               <button className="secondary-button" onClick={downloadBulkTemplate}><Download size={18} /> Template</button>
-              <button className="primary-button" onClick={openBulkPicker}><FileSpreadsheet size={18} /> Proceed To Upload</button>
+              <button className="primary-button" onClick={openBulkPicker} disabled={busyAction === 'bulk'}>
+                <FileSpreadsheet size={18} /> {busyAction === 'bulk' ? 'Uploading...' : 'Proceed To Upload'}
+              </button>
             </div>
           </div>
         </Modal>

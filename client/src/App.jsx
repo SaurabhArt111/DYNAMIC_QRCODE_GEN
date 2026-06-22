@@ -48,6 +48,7 @@ export default function App() {
       <main className="main-panel">
         <Outlet />
       </main>
+      {/* Mobile Bottom Navigation */}
       <div className="mobile-bottom-nav">
         <NavLink to="/">
           <BarChart3 size={20} />

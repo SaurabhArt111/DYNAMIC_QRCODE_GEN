@@ -35,6 +35,15 @@ button {
   cursor: pointer;
 }
 
+button:disabled,
+.primary-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled,
+.icon-button:disabled {
+  cursor: progress;
+  opacity: 0.68;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -146,6 +155,31 @@ a {
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 14px;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(74, 20, 27, 0.18);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+.page-loader {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 780px) {

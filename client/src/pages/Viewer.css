@@ -84,6 +84,7 @@
   place-items: center;
   padding: 18px;
   background: #e9edeb;
+  position: relative;
 }
 
 .viewer-stage img,
@@ -113,6 +114,19 @@
   gap: 14px;
   text-align: center;
   padding: 30px;
+}
+
+.viewer-stage-loading {
+  position: absolute;
+  inset: 18px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  background: rgba(233, 237, 235, 0.78);
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
 }
 
 .mobile-file-nav {

@@ -24,6 +24,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/vault/:token" element={<Viewer />} />
+          <Route path="/vault" element={<Navigate to="/login" replace />} />
+          <Route path="/vault/*" element={<Navigate to="/login" replace />} />
           <Route
             path="/"
             element={
@@ -38,6 +40,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Route path="recycle-bin" element={<RecycleBin />} />
             <Route path="settings" element={<Settings />} />
           </Route>
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

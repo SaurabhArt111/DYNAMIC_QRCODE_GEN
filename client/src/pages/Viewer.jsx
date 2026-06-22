@@ -12,6 +12,7 @@ export default function Viewer() {
   const [message, setMessage] = useState('');
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [fileLoading, setFileLoading] = useState(false);
   const contentRef = useRef(null);
 
   useEffect(() => {
@@ -45,12 +46,16 @@ export default function Viewer() {
   const file = vault?.uploads?.[active];
   const src = useMemo(() => (file ? fileUrl(file.viewUrl) : ''), [file]);
 
+  useEffect(() => {
+    setFileLoading(Boolean(file && (file.category !== 'document' || file.previewable)));
+  }, [file?.id, file?.category, file?.previewable]);
+
   function fullscreen() {
     contentRef.current?.requestFullscreen?.();
   }
 
   if (status === 'loading') {
-    return <main className="viewer-page"><div className="viewer-loading">Loading secure vault...</div></main>;
+    return <main className="viewer-page"><div className="viewer-loading"><span className="spinner" /> Loading secure vault...</div></main>;
   }
 
   if (status === 'deleted' || status === 'inactive' || status === 'missing') {
@@ -87,7 +92,11 @@ export default function Viewer() {
       <section className="viewer-layout">
         <aside className="viewer-list">
           {vault.uploads.map((item, index) => (
-            <button className={active === index ? 'active' : ''} key={item.id} onClick={() => { setActive(index); setZoom(1); }}>
+            <button className={active === index ? 'active' : ''} key={item.id} onClick={() => {
+              if (active !== index) setFileLoading(true);
+              setActive(index);
+              setZoom(1);
+            }}>
               <strong>File {index + 1}</strong>
               <span>{item.originalName}</span>
             </button>
@@ -109,11 +118,12 @@ export default function Viewer() {
                 </div>
               </div>
               <div className="viewer-stage" ref={contentRef}>
-                {file.category === 'image' && <img src={src} style={{ transform: `scale(${zoom})` }} alt={file.originalName} />}
-                {file.category === 'video' && <video src={src} controls playsInline />}
-                {file.category === 'audio' && <audio src={src} controls />}
-                {file.category === 'pdf' && <iframe src={src} title={file.originalName} style={{ transform: `scale(${zoom})` }} />}
-                {file.category === 'document' && file.previewable && <iframe src={src} title={file.originalName} />}
+                {fileLoading && <div className="viewer-stage-loading"><span className="spinner" /> Loading file...</div>}
+                {file.category === 'image' && <img src={src} style={{ transform: `scale(${zoom})` }} alt={file.originalName} onLoad={() => setFileLoading(false)} onError={() => setFileLoading(false)} />}
+                {file.category === 'video' && <video src={src} controls playsInline onLoadedData={() => setFileLoading(false)} onError={() => setFileLoading(false)} />}
+                {file.category === 'audio' && <audio src={src} controls onLoadedMetadata={() => setFileLoading(false)} onError={() => setFileLoading(false)} />}
+                {file.category === 'pdf' && <iframe src={src} title={file.originalName} style={{ transform: `scale(${zoom})` }} onLoad={() => setFileLoading(false)} />}
+                {file.category === 'document' && file.previewable && <iframe src={src} title={file.originalName} onLoad={() => setFileLoading(false)} />}
                 {file.category === 'document' && !file.previewable && (
                   <div className="document-fallback">
                     <ExternalLink size={34} />
@@ -131,7 +141,11 @@ export default function Viewer() {
       {vault.uploads.length > 1 && (
         <nav className="mobile-file-nav">
           {vault.uploads.map((item, index) => (
-            <button className={active === index ? 'active' : ''} key={item.id} onClick={() => { setActive(index); setZoom(1); }}>
+            <button className={active === index ? 'active' : ''} key={item.id} onClick={() => {
+              if (active !== index) setFileLoading(true);
+              setActive(index);
+              setZoom(1);
+            }}>
               File {index + 1}
             </button>
           ))}
