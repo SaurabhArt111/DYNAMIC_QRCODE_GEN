@@ -1,6 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Navigate
+} from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext.jsx';
 
@@ -17,14 +21,35 @@ import Viewer from './pages/Viewer.jsx';
 
 import './styles/global.css';
 
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem('dv_token');
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
 const router = createBrowserRouter(
   [
-    { path: '/login', element: <Login /> },
-    { path: '/vault/:token', element: <Viewer /> },
+    {
+      path: '/login',
+      element: <Login />
+    },
+
+    {
+      path: '/vault/:token',
+      element: <Viewer />
+    },
 
     {
       path: '/',
-      element: <App />,
+      element: (
+        <ProtectedRoute>
+          <App />
+        </ProtectedRoute>
+      ),
       children: [
         { index: true, element: <Dashboard /> },
         { path: 'collections', element: <Collections /> },
