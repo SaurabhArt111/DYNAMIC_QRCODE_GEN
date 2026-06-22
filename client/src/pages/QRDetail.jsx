@@ -178,33 +178,62 @@ export default function QRDetail() {
           </dl>
         </aside>
       </div>
-      <section className="detail-panel">
+      <section className="detail-panel files-panel">
         <div className="files-head">
-          <h2>Uploaded Files</h2>
-          <button className="primary-button" onClick={uploadFiles} disabled={!queuedFiles.length || uploadingFiles.length > 0}>
-            <UploadCloud size={18} /> {uploadingFiles.length ? 'Uploading...' : 'Add Files'}
-          </button>
+          <h2>Files</h2>
+          <span className="file-count">{data.uploads.length} of 4</span>
         </div>
-        <div className="upload-slots">
-          {selectedFiles.map((file, index) => (
-            <label className={`upload-slot ${file ? 'has-file' : ''}`} key={index}>
-              <input hidden type="file" onChange={(event) => selectUploadSlot(index, event)} disabled={uploadingFiles.length > 0} />
-              <span>Upload {index + 1}</span>
-              {file ? <strong>{file.name}</strong> : <em>Select one file</em>}
-              {file && <button type="button" onClick={(event) => { event.preventDefault(); clearUploadSlot(index); }} aria-label={`Clear upload ${index + 1}`}><X size={16} /></button>}
-            </label>
-          ))}
-        </div>
-        <div className="file-list">
+        
+        {data.uploads.length < 4 && (
+          <label className="drop-zone">
+            <input hidden type="file" multiple onChange={(event) => {
+              Array.from(event.target.files || []).slice(0, 4 - data.uploads.length).forEach((file, idx) => {
+                setSelectedFiles((current) => current.map((item, i) => (i === idx && !item ? file : item)));
+              });
+              event.target.value = '';
+            }} disabled={uploadingFiles.length > 0} />
+            <UploadCloud size={28} />
+            <span className="drop-label">Drop files here or <strong>click to browse</strong></span>
+            <span className="drop-hint">Up to 4 files total</span>
+          </label>
+        )}
+
+        <div className="file-queue">
+          {queuedFiles.length > 0 && (
+            <div className="queue-section">
+              <span className="queue-title">Ready to upload</span>
+              {queuedFiles.map((file, index) => (
+                <div className="queued-file" key={`${file.name}-${index}`}>
+                  <div>
+                    <strong>{file.name}</strong>
+                    <span>{formatBytes(file.size)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => clearUploadSlot(selectedFiles.indexOf(file))}
+                    className="remove-btn"
+                    aria-label="Remove from queue"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+              <button className="primary-button upload-btn" onClick={uploadFiles} disabled={uploadingFiles.length > 0}>
+                <UploadCloud size={18} /> {uploadingFiles.length ? 'Uploading...' : `Upload ${queuedFiles.length}`}
+              </button>
+            </div>
+          )}
+
           {uploadingFiles.map((file, index) => (
-            <article className="file-row file-skeleton" key={`${file.name}-${index}`}>
+            <div className="file-row file-skeleton" key={`${file.name}-${index}`}>
               <div>
                 <strong>{file.name}</strong>
-                <span>Processing upload - {formatBytes(file.size)}</span>
+                <span>Uploading - {formatBytes(file.size)}</span>
               </div>
               <span className="spinner" />
-            </article>
+            </div>
           ))}
+
           {data.uploads.map((file, index) => (
             <article
               className={`file-row ${dragIndex === index ? 'dragging' : ''}`}
@@ -222,19 +251,20 @@ export default function QRDetail() {
                   <span>{file.category} - {formatBytes(file.sizeBytes)}</span>
                 </div>
               </div>
-              <div className="button-row">
-                <button className="secondary-button" onClick={() => reorderFiles(index, index - 1)} disabled={index === 0 || busyAction === 'reorder'}>Up</button>
-                <button className="secondary-button" onClick={() => reorderFiles(index, index + 1)} disabled={index === data.uploads.length - 1 || busyAction === 'reorder'}>Down</button>
-                <a className="secondary-button" href={fileUrl(`/api/vault/${data.qr.token}/files/${file._id}/download`)}>Download</a>
-                <label className="secondary-button">{busyAction === `replace-${file._id}` ? 'Replacing...' : 'Replace'}<input hidden type="file" onChange={(event) => replaceFile(file._id, event)} /></label>
-                <button className="icon-button" onClick={() => removeFile(file._id)} disabled={busyAction === `remove-${file._id}`} aria-label="Remove file"><Trash2 size={18} /></button>
+              <div className="file-actions">
+                <button className="icon-button" onClick={() => reorderFiles(index, index - 1)} disabled={index === 0 || busyAction === 'reorder'} title="Move up"><span>↑</span></button>
+                <button className="icon-button" onClick={() => reorderFiles(index, index + 1)} disabled={index === data.uploads.length - 1 || busyAction === 'reorder'} title="Move down"><span>↓</span></button>
+                <a className="icon-button" href={fileUrl(`/api/vault/${data.qr.token}/files/${file._id}/download`)} title="Download"><Download size={16} /></a>
+                <label className="icon-button" title="Replace file">{busyAction === `replace-${file._id}` ? '…' : '↻'}<input hidden type="file" onChange={(event) => replaceFile(file._id, event)} /></label>
+                <button className="icon-button danger" onClick={() => removeFile(file._id)} disabled={busyAction === `remove-${file._id}`} aria-label="Remove file"><Trash2 size={16} /></button>
               </div>
             </article>
           ))}
-          {!data.uploads.length && !uploadingFiles.length && (
+
+          {!data.uploads.length && !uploadingFiles.length && !queuedFiles.length && (
             <article className="empty-files">
-              <strong>No files uploaded yet.</strong>
-              <span>Select up to four files above, then click Add Files.</span>
+              <strong>No files yet.</strong>
+              <span>Upload up to 4 files to this vault.</span>
             </article>
           )}
         </div>
