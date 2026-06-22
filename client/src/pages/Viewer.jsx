@@ -97,8 +97,8 @@ export default function Viewer() {
               setActive(index);
               setZoom(1);
             }}>
-              <strong>File {index + 1}</strong>
-              <span>{item.originalName}</span>
+              <strong>{item.originalName}</strong>
+              {/* <span>{item.originalName}</span> */}
             </button>
           ))}
         </aside>
@@ -146,7 +146,7 @@ export default function Viewer() {
               setActive(index);
               setZoom(1);
             }}>
-              File {index + 1}
+              {item.originalName}
             </button>
           ))}
         </nav>
