@@ -1,290 +1,169 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Archive, Download, FolderUp, Plus, Save, Trash2, UploadCloud } from 'lucide-react';
+import { FolderOpen, Plus, Trash2, Edit2, FileText } from 'lucide-react';
 import { api } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
 import { formatBytes, formatDate } from '../utils/format.js';
-import './QRCodes.css';
 import './Collections.css';
-
-const emptyCollectionForm = { name: '', description: '', defaultPdf: null };
-const emptyQrForm = { name: '', description: '' };
 
 export default function Collections() {
   const [collections, setCollections] = useState([]);
-  const [active, setActive] = useState(null);
-  const [modal, setModal] = useState(null);
-  const [collectionForm, setCollectionForm] = useState(emptyCollectionForm);
-  const [qrForm, setQrForm] = useState(emptyQrForm);
-  const [busyAction, setBusyAction] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(null); // 'create' | { edit: col }
+  const [form, setForm] = useState({ name: '', description: '' });
+  const [pdfFile, setPdfFile] = useState(null);
+  const [removePdf, setRemovePdf] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const folderInputRef = useRef(null);
+  const pdfInputRef = useRef(null);
 
-  async function loadCollections() {
-    const { data } = await api.get('/collections');
-    setCollections(data.items);
-    if (!active && data.items.length) {
-      await loadCollection(data.items[0]._id);
+  async function load() {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/collections');
+      setCollections(data.items);
+    } finally {
+      setLoading(false);
     }
   }
 
-  async function loadCollection(id) {
-    const { data } = await api.get(`/collections/${id}`);
-    setActive(data);
+  useEffect(() => { load(); }, []);
+
+  function openCreate() {
+    setForm({ name: '', description: '' });
+    setPdfFile(null);
+    setRemovePdf(false);
+    setError('');
+    setModal('create');
   }
 
-  useEffect(() => {
-    loadCollections();
-  }, []);
+  function openEdit(col) {
+    setForm({ name: col.name, description: col.description || '' });
+    setPdfFile(null);
+    setRemovePdf(false);
+    setError('');
+    setModal({ edit: col });
+  }
 
-  async function createCollection(event) {
-    event.preventDefault();
-    const formData = new FormData();
-    formData.append('name', collectionForm.name);
-    formData.append('description', collectionForm.description);
-    if (collectionForm.defaultPdf) formData.append('defaultPdf', collectionForm.defaultPdf);
-
-    setBusyAction('create-collection');
+  async function submitForm() {
+    if (!form.name.trim()) { setError('Collection name is required.'); return; }
+    setBusy(true);
+    setError('');
     try {
-      const { data } = await api.post('/collections', formData);
-      setCollectionForm(emptyCollectionForm);
+      const fd = new FormData();
+      fd.append('name', form.name.trim());
+      fd.append('description', form.description);
+      if (pdfFile) fd.append('defaultPdf', pdfFile);
+      if (modal?.edit && removePdf) fd.append('removePdf', 'true');
+
+      if (modal?.edit) {
+        await api.put(`/collections/${modal.edit._id}`, fd);
+      } else {
+        await api.post('/collections', fd);
+      }
       setModal(null);
-      setError('');
-      await loadCollections();
-      await loadCollection(data._id);
+      await load();
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to create collection.');
+      setError(err.response?.data?.message || 'Operation failed.');
     } finally {
-      setBusyAction('');
+      setBusy(false);
     }
   }
 
-  async function saveCollection(event) {
-    event.preventDefault();
-    if (!active?.collection) return;
-
-    const formData = new FormData();
-    formData.append('name', active.collection.name);
-    formData.append('description', active.collection.description || '');
-    const file = event.currentTarget.defaultPdf.files?.[0];
-    if (file) formData.append('defaultPdf', file);
-
-    setBusyAction('save-collection');
+  async function deleteCollection(col) {
+    if (!window.confirm(`Delete collection "${col.name}"? QR codes inside will be unlinked (not deleted).`)) return;
     try {
-      await api.put(`/collections/${active.collection._id}`, formData);
-      await loadCollections();
-      await loadCollection(active.collection._id);
-      event.currentTarget.defaultPdf.value = '';
+      await api.delete(`/collections/${col._id}`);
+      await load();
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to save collection.');
-    } finally {
-      setBusyAction('');
+      setError(err.response?.data?.message || 'Delete failed.');
     }
   }
 
-  async function removeDefaultPdf() {
-    if (!active?.collection) return;
-    setBusyAction('remove-pdf');
-    try {
-      await api.delete(`/collections/${active.collection._id}/default-pdf`);
-      await loadCollection(active.collection._id);
-      await loadCollections();
-    } finally {
-      setBusyAction('');
-    }
-  }
-
-  async function deleteCollection() {
-    if (!active?.collection) return;
-    if (!window.confirm('Delete this empty collection?')) return;
-
-    setBusyAction('delete-collection');
-    try {
-      await api.delete(`/collections/${active.collection._id}`);
-      setActive(null);
-      setError('');
-      await loadCollections();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Unable to delete collection.');
-    } finally {
-      setBusyAction('');
-    }
-  }
-
-  async function createQr(event) {
-    event.preventDefault();
-    if (!active?.collection) return;
-
-    setBusyAction('create-qr');
-    try {
-      await api.post(`/collections/${active.collection._id}/qrcodes`, qrForm);
-      setQrForm(emptyQrForm);
-      setModal(null);
-      await loadCollection(active.collection._id);
-      await loadCollections();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Unable to create QR.');
-    } finally {
-      setBusyAction('');
-    }
-  }
-
-  async function bulkCreate(event) {
-    const files = Array.from(event.target.files || []);
-    if (!files.length || !active?.collection) return;
-
-    const formData = new FormData();
-    files.forEach((file) => formData.append('files', file, file.webkitRelativePath || file.name));
-    setBusyAction('bulk-folders');
-    try {
-      const { data } = await api.post(`/collections/${active.collection._id}/bulk-folders`, formData);
-      setModal(null);
-      setError(`Created ${data.count} QR codes from folders.`);
-      await loadCollection(active.collection._id);
-      await loadCollections();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Bulk folder creation failed.');
-    } finally {
-      setBusyAction('');
-      event.target.value = '';
-    }
-  }
+  const editingCol = modal?.edit;
 
   return (
     <section className="page">
-      <input ref={folderInputRef} hidden type="file" multiple webkitdirectory="" directory="" onChange={bulkCreate} />
       <div className="page-header">
         <div>
           <h1>Collections</h1>
-          <p>Group QR codes and attach one shared PDF to every QR in the collection.</p>
+          <p>Organise QR codes into groups with a shared default PDF document.</p>
         </div>
-        <button className="primary-button" onClick={() => setModal('collection')}><Plus size={18} /> New Collection</button>
+        <button className="primary-button" onClick={openCreate}><Plus size={18} /> New Collection</button>
       </div>
 
-      {error && <div className={error.startsWith('Created') ? 'success-box' : 'error-box'}>{error}</div>}
+      {error && <div className="error-box">{error}</div>}
 
-      <div className="collections-layout">
-        <aside className="collections-list">
-          {collections.map((collection) => (
-            <button
-              type="button"
-              className={active?.collection?._id === collection._id ? 'collection-tab active' : 'collection-tab'}
-              key={collection._id}
-              onClick={() => loadCollection(collection._id)}
-            >
-              <Archive size={18} />
-              <span>
-                <strong>{collection.name}</strong>
-                <small>{collection.qrCount} QR codes</small>
-              </span>
-            </button>
-          ))}
-          {!collections.length && <div className="qr-empty">No collections yet.</div>}
-        </aside>
-
-        {active?.collection ? (
-          <div className="collection-workspace">
-            <form className="detail-panel collection-editor" onSubmit={saveCollection}>
-              <div className="collection-editor-grid">
-                <div className="field">
-                  <label>Collection Name</label>
-                  <input value={active.collection.name} onChange={(e) => setActive({ ...active, collection: { ...active.collection, name: e.target.value } })} />
-                </div>
-                <div className="field">
-                  <label>Shared PDF</label>
-                  <input name="defaultPdf" type="file" accept="application/pdf" />
-                </div>
-              </div>
-              <div className="field">
-                <label>Description</label>
-                <textarea value={active.collection.description || ''} onChange={(e) => setActive({ ...active, collection: { ...active.collection, description: e.target.value } })} />
-              </div>
-              <div className="collection-pdf-row">
-                <span>
-                  {active.collection.defaultFile
-                    ? `${active.collection.defaultFile.originalName} - ${formatBytes(active.collection.defaultFile.sizeBytes)}`
-                    : 'No shared PDF attached'}
-                </span>
-                <div className="button-row">
-                  {active.collection.defaultFile && (
-                    <button type="button" className="secondary-button" onClick={removeDefaultPdf} disabled={busyAction === 'remove-pdf'}><Trash2 size={18} /> Remove PDF</button>
-                  )}
-                  <button type="button" className="danger-button" onClick={deleteCollection} disabled={active.collection.qrCount > 0 || busyAction === 'delete-collection'}><Trash2 size={18} /> Delete</button>
-                  <button className="primary-button" disabled={busyAction === 'save-collection'}><Save size={18} /> {busyAction === 'save-collection' ? 'Saving...' : 'Save Collection'}</button>
-                </div>
-              </div>
-            </form>
-
-            <div className="page-header compact-header">
-              <div>
-                <h2>QR Codes</h2>
-                <p>{active.qrs.length} QR codes in this collection.</p>
-              </div>
-              <div className="button-row">
-                <button className="secondary-button" onClick={() => setModal('bulk')} disabled={busyAction === 'bulk-folders'}><FolderUp size={18} /> Bulk Create</button>
-                <button className="primary-button" onClick={() => setModal('qr')}><Plus size={18} /> Create QR</button>
-              </div>
+      <div className="col-grid">
+        {loading && Array.from({ length: 4 }).map((_, i) => (
+          <article className="col-card col-card-skeleton" key={i}><span /><p /><div /></article>
+        ))}
+        {!loading && collections.map((col) => (
+          <article className="col-card" key={col._id}>
+            <div className="col-card-header">
+              <FolderOpen size={22} className="col-icon" />
+              <strong>{col.name}</strong>
             </div>
-
-            <div className="qr-grid">
-              {active.qrs.map((qr) => (
-                <article className="qr-card" key={qr._id}>
-                  <div>
-                    <strong>{qr.name}</strong>
-                    <span>{qr.token}</span>
-                  </div>
-                  <p>{qr.description || 'No description'}</p>
-                  <dl>
-                    <div><dt>Size</dt><dd>{formatBytes(qr.sizeBytes)}</dd></div>
-                    <div><dt>Status</dt><dd>{qr.status}</dd></div>
-                    <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
-                  </dl>
-                  <div className="button-row">
-                    <Link className="primary-button" to={`/qrcodes/${qr._id}`}>Manage</Link>
-                  </div>
-                </article>
-              ))}
-              {!active.qrs.length && <div className="qr-empty">No QR codes in this collection.</div>}
+            {col.description && <p className="col-desc">{col.description}</p>}
+            {col.defaultPdf ? (
+              <div className="col-pdf-badge">
+                <FileText size={14} />
+                <span>{col.defaultPdf.originalName}</span>
+                <span className="col-pdf-size">{formatBytes(col.defaultPdf.sizeBytes)}</span>
+              </div>
+            ) : (
+              <div className="col-pdf-badge col-pdf-none">No default PDF</div>
+            )}
+            <div className="col-meta">{formatDate(col.createdAt)}</div>
+            <div className="button-row">
+              <Link className="primary-button" to={`/collections/${col._id}`}>Open</Link>
+              <button className="icon-button" title="Edit" onClick={() => openEdit(col)}><Edit2 size={16} /></button>
+              <button className="icon-button danger" title="Delete" onClick={() => deleteCollection(col)}><Trash2 size={16} /></button>
             </div>
-          </div>
-        ) : (
-          <div className="qr-empty">Create a collection to begin.</div>
+          </article>
+        ))}
+        {!loading && !collections.length && (
+          <div className="col-empty">No collections yet. Create one to group your QR codes.</div>
         )}
       </div>
 
-      {modal === 'collection' && (
-        <Modal title="New Collection" onClose={() => setModal(null)}>
-          <form onSubmit={createCollection}>
-            <div className="field"><label>Name</label><input value={collectionForm.name} onChange={(e) => setCollectionForm({ ...collectionForm, name: e.target.value })} required /></div>
-            <div className="field"><label>Description</label><textarea value={collectionForm.description} onChange={(e) => setCollectionForm({ ...collectionForm, description: e.target.value })} /></div>
-            <div className="field"><label>Default PDF</label><input type="file" accept="application/pdf" onChange={(e) => setCollectionForm({ ...collectionForm, defaultPdf: e.target.files?.[0] || null })} /></div>
-            <button className="primary-button" disabled={busyAction === 'create-collection'}><UploadCloud size={18} /> {busyAction === 'create-collection' ? 'Creating...' : 'Create Collection'}</button>
-          </form>
-        </Modal>
-      )}
-
-      {modal === 'qr' && (
-        <Modal title="Create QR" onClose={() => setModal(null)}>
-          <form onSubmit={createQr}>
-            <div className="field"><label>QR Name</label><input value={qrForm.name} onChange={(e) => setQrForm({ ...qrForm, name: e.target.value })} required /></div>
-            <div className="field"><label>Description</label><textarea value={qrForm.description} onChange={(e) => setQrForm({ ...qrForm, description: e.target.value })} /></div>
-            <button className="primary-button" disabled={busyAction === 'create-qr'}><Plus size={18} /> {busyAction === 'create-qr' ? 'Creating...' : 'Create QR'}</button>
-          </form>
-        </Modal>
-      )}
-
-      {modal === 'bulk' && (
-        <Modal title="Bulk Create From Folders" onClose={() => setModal(null)}>
-          <div className="bulk-guide">
-            <p>Select one or more folders. Each top-level folder becomes one QR code, and files inside it are attached to that QR.</p>
-            <div className="bulk-notes">
-              <span>Folder name becomes QR name</span>
-              <span>Supports large multi-folder batches</span>
-              <span>Shared collection PDF is linked automatically</span>
+      {(modal === 'create' || modal?.edit) && (
+        <Modal title={editingCol ? `Edit "${editingCol.name}"` : 'New Collection'} onClose={() => setModal(null)}>
+          <div className="modal-form">
+            {error && <div className="error-box">{error}</div>}
+            <div className="field">
+              <label>Collection Name *</label>
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Product Catalogues" />
             </div>
-            <button className="primary-button" onClick={() => folderInputRef.current?.click()} disabled={busyAction === 'bulk-folders'}>
-              <FolderUp size={18} /> {busyAction === 'bulk-folders' ? 'Uploading...' : 'Choose Folders'}
-            </button>
+            <div className="field">
+              <label>Description</label>
+              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Optional description" />
+            </div>
+            <div className="field">
+              <label>Default PDF (optional)</label>
+              <p className="field-hint">This PDF will appear in every QR code inside this collection.</p>
+              {editingCol?.defaultPdf && !removePdf && !pdfFile && (
+                <div className="existing-pdf">
+                  <FileText size={14} />
+                  <span>{editingCol.defaultPdf.originalName}</span>
+                  <button type="button" className="remove-btn-sm" onClick={() => setRemovePdf(true)}>Remove</button>
+                </div>
+              )}
+              {!removePdf && (
+                <div className="pdf-pick-row">
+                  <input ref={pdfInputRef} type="file" accept="application/pdf" hidden onChange={(e) => { setPdfFile(e.target.files[0] || null); e.target.value = ''; }} />
+                  <button type="button" className="secondary-button" onClick={() => pdfInputRef.current?.click()}>
+                    {pdfFile ? `${pdfFile.name} (${formatBytes(pdfFile.size)})` : (editingCol?.defaultPdf ? 'Replace PDF' : 'Choose PDF')}
+                  </button>
+                  {pdfFile && <button type="button" className="remove-btn-sm" onClick={() => setPdfFile(null)}>Clear</button>}
+                </div>
+              )}
+              {removePdf && <p className="field-hint" style={{ color: 'var(--danger)' }}>PDF will be removed on save. <button type="button" className="link-btn" onClick={() => setRemovePdf(false)}>Undo</button></p>}
+            </div>
+            <div className="button-row">
+              <button className="secondary-button" onClick={() => setModal(null)} disabled={busy}>Cancel</button>
+              <button className="primary-button" onClick={submitForm} disabled={busy}>{busy ? 'Saving...' : (editingCol ? 'Save Changes' : 'Create Collection')}</button>
+            </div>
           </div>
         </Modal>
       )}

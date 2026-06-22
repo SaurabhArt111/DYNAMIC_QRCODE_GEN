@@ -23,43 +23,8 @@ export const qrUpload = multer({
   storage,
   fileFilter,
   limits: {
-    files: 4,
+    files: 500, // allow many files for bulk-folder operations
     fileSize: env.maxFileSizeMb * 1024 * 1024
-  }
-});
-
-export const bulkQrUpload = multer({
-  storage,
-  fileFilter,
-  limits: {
-    files: 1500,
-    fileSize: env.maxFileSizeMb * 1024 * 1024
-  }
-});
-
-export const collectionPdfUpload = multer({
-  storage,
-  limits: {
-    files: 1,
-    fileSize: env.maxFileSizeMb * 1024 * 1024
-  },
-  fileFilter: (req, file, cb) => {
-    const ok = file.mimetype === 'application/pdf';
-    cb(ok ? null : new Error('Please upload a PDF file.'), ok);
-  }
-});
-
-export const excelUpload = multer({
-  storage,
-  limits: {
-    files: 1,
-    fileSize: env.maxFileSizeMb * 1024 * 1024
-  },
-  fileFilter: (req, file, cb) => {
-    const ok =
-      file.mimetype === 'application/vnd.ms-excel' ||
-      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    cb(ok ? null : new Error('Please upload an Excel file.'), ok);
   }
 });
 
@@ -74,7 +39,7 @@ export function handleUploadErrors(err, req, res, next) {
   }
 
   if (err.code === 'LIMIT_FILE_COUNT') {
-    return res.status(400).json({ message: 'Too many files were selected for this action.' });
+    return res.status(400).json({ message: 'Too many files uploaded at once.' });
   }
 
   res.status(400).json({ message: err.message || 'File upload rejected.' });

@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Database, QrCode, TrendingUp } from 'lucide-react';
+import { Activity, Database, QrCode } from 'lucide-react';
 import { api } from '../api/http.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './Dashboard.css';
+
+const ACTION_LABELS = {
+  QR_CREATED: 'QR Created',
+  QR_MODIFIED: 'QR Modified',
+  QR_DELETED: 'QR Recycled',
+  QR_RESTORED: 'QR Restored',
+  QR_PURGED: 'QR Deleted'
+};
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -12,8 +20,8 @@ export default function Dashboard() {
   }, []);
 
   const cards = [
-    ['Total QR Codes', data?.totalQrCodes || 0, QrCode],
-    ['Active QR Codes', data?.activeQrCodes || 0, TrendingUp],
+    ['Total QR Codes', data?.totalQrCodes ?? 0, QrCode],
+    ['Active QR Codes', data?.activeQrCodes ?? 0, Activity],
     ['Storage Usage', formatBytes(data?.storageUsageBytes || 0), Database]
   ];
 
@@ -25,7 +33,7 @@ export default function Dashboard() {
           <p>Operational overview for every dynamic QR in the vault.</p>
         </div>
       </div>
-      <div className="metric-grid">
+      <div className="metric-grid metric-grid-3">
         {cards.map(([label, value, Icon]) => (
           <article className="metric-card" key={label}>
             <Icon size={22} />
@@ -39,11 +47,15 @@ export default function Dashboard() {
         <div className="activity-list">
           {(data?.recentActivity || []).map((item) => (
             <div className="activity-item" key={item._id}>
-              <strong>{item.message}</strong>
-              <span>{formatDate(item.createdAt)}</span>
+              <div className="activity-item-info">
+                <span className={`activity-badge action-${item.action}`}>{ACTION_LABELS[item.action] || item.action}</span>
+                <strong>{item.message}</strong>
+              </div>
+              <span className="activity-time">{formatDate(item.createdAt)}</span>
             </div>
           ))}
-          {data?.recentActivity?.length === 0 && <p>No activity yet.</p>}
+          {data?.recentActivity?.length === 0 && <p className="activity-empty">No activity yet.</p>}
+          {!data && <p className="activity-empty">Loading...</p>}
         </div>
       </section>
     </section>

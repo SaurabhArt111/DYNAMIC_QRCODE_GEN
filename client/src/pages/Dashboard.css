@@ -1,7 +1,11 @@
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
   gap: 14px;
+}
+
+.metric-grid-3 {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
 }
 
 .metric-card {
@@ -14,19 +18,9 @@
   box-shadow: var(--shadow);
 }
 
-.metric-card svg {
-  color: var(--primary);
-}
-
-.metric-card span {
-  color: var(--muted);
-  font-size: 0.88rem;
-  font-weight: 700;
-}
-
-.metric-card strong {
-  font-size: 1.65rem;
-}
+.metric-card svg { color: var(--primary); }
+.metric-card span { color: var(--muted); font-size: 0.88rem; font-weight: 700; }
+.metric-card strong { font-size: 1.65rem; }
 
 .activity-panel {
   background: var(--surface);
@@ -35,42 +29,48 @@
   padding: 20px;
 }
 
-.activity-panel h2 {
-  margin: 0 0 14px;
-  font-size: 1.1rem;
-}
+.activity-panel h2 { margin: 0 0 14px; font-size: 1.1rem; }
 
-.activity-list {
-  display: grid;
-  gap: 10px;
-}
+.activity-list { display: grid; gap: 10px; }
 
 .activity-item {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
   padding: 12px;
   background: var(--surface-2);
   border-radius: 8px;
 }
 
-.activity-item span {
-  color: var(--muted);
-  font-size: 0.86rem;
+.activity-item-info { display: grid; gap: 4px; }
+.activity-item-info strong { font-size: 0.9rem; }
+
+.activity-time { color: var(--muted); font-size: 0.84rem; white-space: nowrap; }
+.activity-empty { color: var(--muted); text-align: center; padding: 20px 0; margin: 0; }
+
+.activity-badge {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  width: fit-content;
 }
 
+.action-QR_CREATED { background: #d1fae5; color: #065f46; }
+.action-QR_MODIFIED { background: #dbeafe; color: #1e40af; }
+.action-QR_DELETED { background: #fef3c7; color: #92400e; }
+.action-QR_RESTORED { background: #ede9fe; color: #5b21b6; }
+.action-QR_PURGED { background: #fee2e2; color: #991b1b; }
+
 @media (max-width: 1100px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric-grid-3 { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 620px) {
-  .metric-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .activity-item {
-    display: grid;
-  }
+  .metric-grid, .metric-grid-3 { grid-template-columns: 1fr 1fr; }
+  .activity-item { display: grid; }
+  .activity-time { font-size: 0.78rem; }
 }

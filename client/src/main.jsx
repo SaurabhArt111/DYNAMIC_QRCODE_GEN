@@ -1,50 +1,44 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext.jsx';
 import App from './App.jsx';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Collections from './pages/Collections.jsx';
+import CollectionDetail from './pages/CollectionDetail.jsx';
 import QRCodes from './pages/QRCodes.jsx';
 import QRDetail from './pages/QRDetail.jsx';
 import RecycleBin from './pages/RecycleBin.jsx';
 import Settings from './pages/Settings.jsx';
 import Viewer from './pages/Viewer.jsx';
-import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import './styles/global.css';
 
-function PrivateRoute({ children }) {
-  const { token } = useAuth();
-  return token ? children : <Navigate to="/login" replace />;
-}
+const router = createBrowserRouter([
+  { path: '/login', element: <Login /> },
+  { path: '/vault/:token', element: <Viewer /> },
+  {
+    path: '/',
+    element: <AuthProvider><App /></AuthProvider>,
+    children: [
+      { index: true, element: <Dashboard /> },
+      { path: 'collections', element: <Collections /> },
+      { path: 'collections/:id', element: <CollectionDetail /> },
+      { path: 'qrcodes', element: <QRCodes /> },
+      { path: 'qrcodes/:id', element: <QRDetail /> },
+      { path: 'recycle-bin', element: <RecycleBin /> },
+      { path: 'settings', element: <Settings /> }
+    ]
+  }
+], {
+  future: {
+    v7_relativeSplatPath: true,
+    v7_startTransition: true
+  }
+});
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/vault/:token" element={<Viewer />} />
-          <Route path="/vault" element={<Navigate to="/login" replace />} />
-          <Route path="/vault/*" element={<Navigate to="/login" replace />} />
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <App />
-              </PrivateRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="collections" element={<Collections />} />
-            <Route path="qrcodes" element={<QRCodes />} />
-            <Route path="qrcodes/:id" element={<QRDetail />} />
-            <Route path="recycle-bin" element={<RecycleBin />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
-  </React.StrictMode>
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <RouterProvider router={router} />
+  </StrictMode>
 );

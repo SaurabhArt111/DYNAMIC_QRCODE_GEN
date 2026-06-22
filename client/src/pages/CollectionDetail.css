@@ -1,0 +1,92 @@
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.84rem;
+  padding: 0 0 6px;
+  font-weight: 600;
+}
+.back-btn:hover { color: var(--primary); }
+
+.col-pdf-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  margin-top: 6px;
+}
+.col-pdf-indicator svg { color: var(--primary); }
+
+/* Bulk modal */
+.bulk-modal { display: grid; gap: 14px; }
+.bulk-intro { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+.bulk-pick-btn { width: 100%; justify-content: center; }
+
+.bulk-folder-list { display: grid; gap: 8px; }
+.bulk-folder-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0 4px;
+  font-size: 0.84rem;
+  border-bottom: 1px solid var(--border);
+}
+.bulk-folder-header span { color: var(--muted); }
+
+.bulk-folder-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-radius: 6px;
+}
+.bulk-folder-row > div { display: grid; gap: 2px; }
+.bulk-folder-row strong { font-size: 0.9rem; }
+.bulk-folder-row span { font-size: 0.78rem; color: var(--muted); }
+
+.bulk-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.spin { animation: spinAnim 0.8s linear infinite; }
+@keyframes spinAnim { to { transform: rotate(360deg); } }
+
+/* Results */
+.bulk-results { display: grid; gap: 12px; }
+.bulk-results-header { display: flex; align-items: center; gap: 10px; }
+.bulk-results-header strong { font-size: 1rem; }
+.bulk-errors { color: var(--danger, #dc2626); font-size: 0.86rem; font-weight: 700; }
+
+.bulk-result-list { display: grid; gap: 6px; max-height: 280px; overflow-y: auto; }
+.bulk-result-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+.bulk-result-row.ok { background: #d1fae5; color: #065f46; }
+.bulk-result-row.error { background: #fee2e2; color: #991b1b; }
+.bulk-err-msg { font-size: 0.8rem; margin-left: auto; }
+
+@media (max-width: 620px) {
+  .bulk-folder-row { flex-wrap: wrap; }
+}

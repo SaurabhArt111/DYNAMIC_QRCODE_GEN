@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Copy, Download, ExternalLink, GripVertical, Save, Trash2, UploadCloud, X } from 'lucide-react';
+import { Copy, Download, ExternalLink, FileText, GripVertical, Save, Trash2, UploadCloud, X } from 'lucide-react';
 import { api, fileUrl } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
 import { formatBytes, formatDate } from '../utils/format.js';
@@ -24,9 +24,7 @@ export default function QRDetail() {
     setData(res.data);
   }
 
-  useEffect(() => {
-    load();
-  }, [id]);
+  useEffect(() => { load(); }, [id]);
 
   async function saveQr(event) {
     event.preventDefault();
@@ -35,9 +33,7 @@ export default function QRDetail() {
     try {
       await api.put(`/qrcodes/${id}`, { name: qr.name, description: qr.description, status: qr.status });
       await load();
-    } finally {
-      setBusyAction('');
-    }
+    } finally { setBusyAction(''); }
   }
 
   function selectUploadSlot(index, event) {
@@ -62,9 +58,7 @@ export default function QRDetail() {
     } catch (err) {
       const body = err.response?.data;
       setModalError([body?.message, ...(body?.details || [])].filter(Boolean));
-    } finally {
-      setUploadingFiles([]);
-    }
+    } finally { setUploadingFiles([]); }
   }
 
   async function replaceFile(uploadId, event) {
@@ -90,9 +84,7 @@ export default function QRDetail() {
     try {
       await api.delete(`/qrcodes/${id}/files/${uploadId}`);
       await load();
-    } finally {
-      setBusyAction('');
-    }
+    } finally { setBusyAction(''); }
   }
 
   async function recycle() {
@@ -107,13 +99,9 @@ export default function QRDetail() {
       const res = await api.get(`/qrcodes/${id}/qr-image`, { responseType: 'blob' });
       const url = URL.createObjectURL(res.data);
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `${data.qr.name}.png`;
-      link.click();
+      link.href = url; link.download = `${data.qr.name}.png`; link.click();
       URL.revokeObjectURL(url);
-    } finally {
-      setBusyAction('');
-    }
+    } finally { setBusyAction(''); }
   }
 
   async function persistOrder(uploadIds, nextUploads) {
@@ -125,14 +113,11 @@ export default function QRDetail() {
     } catch (err) {
       await load();
       setModalError([err.response?.data?.message || 'Unable to reorder files.']);
-    } finally {
-      setBusyAction('');
-    }
+    } finally { setBusyAction(''); }
   }
 
   function reorderFiles(fromIndex, toIndex) {
     if (fromIndex === null || fromIndex === toIndex || toIndex < 0 || toIndex >= data.uploads.length) return;
-    if (data.uploads[fromIndex]?.isCollectionDefault || data.uploads[toIndex]?.isCollectionDefault) return;
     const nextUploads = [...data.uploads];
     const [moved] = nextUploads.splice(fromIndex, 1);
     nextUploads.splice(toIndex, 0, moved);
@@ -147,19 +132,18 @@ export default function QRDetail() {
     );
   }
 
-  const uploadedFileCount = data.uploads.filter((file) => !file.isCollectionDefault).length;
-  const uploadCapacity = Math.max(4 - uploadedFileCount, 0);
+  const { qr, uploads, collectionPdf } = data;
 
   return (
     <section className="page">
       <div className="page-header">
         <div>
-          <h1>{data.qr.name}</h1>
-          <p>{data.qr.token}</p>
+          <h1>{qr.name}</h1>
+          <p>{qr.token}</p>
         </div>
         <div className="button-row">
-          <button className="secondary-button" onClick={() => navigator.clipboard.writeText(data.qr.vaultUrl)}><Copy size={18} /> Copy URL</button>
-          <a className="secondary-button" href={data.qr.vaultUrl.replace(import.meta.env.VITE_PUBLIC_BASE_URL || 'http://localhost:5000', '')} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Open</a>
+          <button className="secondary-button" onClick={() => navigator.clipboard.writeText(qr.vaultUrl)}><Copy size={18} /> Copy URL</button>
+          <a className="secondary-button" href={qr.vaultUrl.replace(import.meta.env.VITE_PUBLIC_BASE_URL || 'http://localhost:5000', '')} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Open</a>
           <button className="primary-button" onClick={downloadQr} disabled={busyAction === 'download'}><Download size={18} /> {busyAction === 'download' ? 'Preparing...' : 'QR PNG'}</button>
           <button className="danger-button" onClick={recycle} disabled={busyAction === 'recycle'}><Trash2 size={18} /> Recycle</button>
         </div>
@@ -167,31 +151,34 @@ export default function QRDetail() {
       <div className="detail-layout">
         <form className="detail-panel" onSubmit={saveQr}>
           <h2>Content Details</h2>
-          <div className="field"><label>QR Name</label><input value={data.qr.name} onChange={(e) => setData({ ...data, qr: { ...data.qr, name: e.target.value } })} /></div>
-          <div className="field"><label>Description</label><textarea value={data.qr.description} onChange={(e) => setData({ ...data, qr: { ...data.qr, description: e.target.value } })} /></div>
-          <div className="field"><label>Status</label><select value={data.qr.status} onChange={(e) => setData({ ...data, qr: { ...data.qr, status: e.target.value } })}><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+          <div className="field"><label>QR Name</label><input value={qr.name} onChange={(e) => setData({ ...data, qr: { ...qr, name: e.target.value } })} /></div>
+          <div className="field"><label>Description</label><textarea value={qr.description} onChange={(e) => setData({ ...data, qr: { ...qr, description: e.target.value } })} /></div>
+          <div className="field"><label>Status</label><select value={qr.status} onChange={(e) => setData({ ...data, qr: { ...qr, status: e.target.value } })}><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
           <button className="primary-button" disabled={busyAction === 'save'}><Save size={18} /> {busyAction === 'save' ? 'Saving...' : 'Save Changes'}</button>
         </form>
         <aside className="detail-panel">
           <h2>QR Metadata</h2>
           <dl className="meta-list">
-            <div><dt>Created</dt><dd>{formatDate(data.qr.createdAt)}</dd></div>
-            <div><dt>Updated</dt><dd>{formatDate(data.qr.updatedAt)}</dd></div>
-            <div><dt>Total Size</dt><dd>{formatBytes(data.qr.sizeBytes)}</dd></div>
-            <div><dt>Collection</dt><dd>{data.qr.collection?.name || 'None'}</dd></div>
+            <div><dt>Created</dt><dd>{formatDate(qr.createdAt)}</dd></div>
+            <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
+            <div><dt>Total Size</dt><dd>{formatBytes(qr.sizeBytes)}</dd></div>
+            {collectionPdf && (
+              <div><dt>Collection</dt><dd>{collectionPdf.collectionName}</dd></div>
+            )}
           </dl>
         </aside>
       </div>
+
       <section className="detail-panel files-panel">
         <div className="files-head">
           <h2>Files</h2>
-          <span className="file-count">{uploadedFileCount} of 4 uploaded</span>
+          <span className="file-count">{uploads.length} of 4 uploaded{collectionPdf ? ` + 1 collection PDF` : ''}</span>
         </div>
-        
-        {uploadCapacity > 0 && (
+
+        {uploads.length < 4 && (
           <label className="drop-zone">
             <input hidden type="file" multiple onChange={(event) => {
-              Array.from(event.target.files || []).slice(0, uploadCapacity).forEach((file, idx) => {
+              Array.from(event.target.files || []).slice(0, 4 - uploads.length).forEach((file, idx) => {
                 setSelectedFiles((current) => current.map((item, i) => (i === idx && !item ? file : item)));
               });
               event.target.value = '';
@@ -208,18 +195,8 @@ export default function QRDetail() {
               <span className="queue-title">Ready to upload</span>
               {queuedFiles.map((file, index) => (
                 <div className="queued-file" key={`${file.name}-${index}`}>
-                  <div>
-                    <strong>{file.name}</strong>
-                    <span>{formatBytes(file.size)}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => clearUploadSlot(selectedFiles.indexOf(file))}
-                    className="remove-btn"
-                    aria-label="Remove from queue"
-                  >
-                    <X size={16} />
-                  </button>
+                  <div><strong>{file.name}</strong><span>{formatBytes(file.size)}</span></div>
+                  <button type="button" onClick={() => clearUploadSlot(selectedFiles.indexOf(file))} className="remove-btn" aria-label="Remove from queue"><X size={16} /></button>
                 </div>
               ))}
               <button className="primary-button upload-btn" onClick={uploadFiles} disabled={uploadingFiles.length > 0}>
@@ -228,20 +205,10 @@ export default function QRDetail() {
             </div>
           )}
 
-          {uploadingFiles.map((file, index) => (
-            <div className="file-row file-skeleton" key={`${file.name}-${index}`}>
-              <div>
-                <strong>{file.name}</strong>
-                <span>Uploading - {formatBytes(file.size)}</span>
-              </div>
-              <span className="spinner" />
-            </div>
-          ))}
-
-          {data.uploads.map((file, index) => (
+          {uploads.map((file, index) => (
             <article
               className={`file-row ${dragIndex === index ? 'dragging' : ''}`}
-              draggable={!file.isCollectionDefault}
+              draggable
               key={file._id}
               onDragStart={() => setDragIndex(index)}
               onDragOver={(event) => event.preventDefault()}
@@ -249,23 +216,39 @@ export default function QRDetail() {
               onDragEnd={() => setDragIndex(null)}
             >
               <div className="file-title">
-                {!file.isCollectionDefault && <GripVertical size={18} aria-hidden="true" />}
+                <GripVertical size={18} aria-hidden="true" />
                 <div>
                   <strong>{file.originalName}</strong>
-                  <span>{file.isCollectionDefault ? 'Collection PDF' : file.category} - {formatBytes(file.sizeBytes)}</span>
+                  <span>{file.category} - {formatBytes(file.sizeBytes)}</span>
                 </div>
               </div>
               <div className="file-actions">
-                {!file.isCollectionDefault && <button className="icon-button" onClick={() => reorderFiles(index, index - 1)} disabled={index === 0 || data.uploads[index - 1]?.isCollectionDefault || busyAction === 'reorder'} title="Move up"><span>↑</span></button>}
-                {!file.isCollectionDefault && <button className="icon-button" onClick={() => reorderFiles(index, index + 1)} disabled={index === data.uploads.length - 1 || data.uploads[index + 1]?.isCollectionDefault || busyAction === 'reorder'} title="Move down"><span>↓</span></button>}
-                <a className="icon-button" href={fileUrl(`/api/vault/${data.qr.token}/files/${file._id}/download`)} title="Download"><Download size={16} /></a>
-                {!file.isCollectionDefault && <label className="icon-button" title="Replace file">{busyAction === `replace-${file._id}` ? '…' : '↻'}<input hidden type="file" onChange={(event) => replaceFile(file._id, event)} /></label>}
-                {!file.isCollectionDefault && <button className="icon-button danger" onClick={() => removeFile(file._id)} disabled={busyAction === `remove-${file._id}`} aria-label="Remove file"><Trash2 size={16} /></button>}
+                <button className="icon-button" onClick={() => reorderFiles(index, index - 1)} disabled={index === 0 || busyAction === 'reorder'} title="Move up"><span>↑</span></button>
+                <button className="icon-button" onClick={() => reorderFiles(index, index + 1)} disabled={index === uploads.length - 1 || busyAction === 'reorder'} title="Move down"><span>↓</span></button>
+                <a className="icon-button" href={fileUrl(`/api/vault/${qr.token}/files/${file._id}/download`)} title="Download"><Download size={16} /></a>
+                <label className="icon-button" title="Replace file">{busyAction === `replace-${file._id}` ? '…' : '↻'}<input hidden type="file" onChange={(event) => replaceFile(file._id, event)} /></label>
+                <button className="icon-button danger" onClick={() => removeFile(file._id)} disabled={busyAction === `remove-${file._id}`} aria-label="Remove file"><Trash2 size={16} /></button>
               </div>
             </article>
           ))}
 
-          {!data.uploads.length && !uploadingFiles.length && !queuedFiles.length && (
+          {/* Collection PDF (read-only) */}
+          {collectionPdf && (
+            <article className="file-row file-row-collection">
+              <div className="file-title">
+                <FileText size={18} className="col-pdf-icon" />
+                <div>
+                  <strong>{collectionPdf.originalName}</strong>
+                  <span>Collection PDF — {collectionPdf.collectionName} — {formatBytes(collectionPdf.sizeBytes)}</span>
+                </div>
+              </div>
+              <div className="file-actions">
+                <span className="col-pdf-tag">Auto</span>
+              </div>
+            </article>
+          )}
+
+          {!uploads.length && !uploadingFiles.length && !queuedFiles.length && !collectionPdf && (
             <article className="empty-files">
               <strong>No files yet.</strong>
               <span>Upload up to 4 files to this vault.</span>
@@ -273,6 +256,7 @@ export default function QRDetail() {
           )}
         </div>
       </section>
+
       {modalError && (
         <Modal title="File Upload Rejected" onClose={() => setModalError(null)}>
           {modalError.map((line) => <p key={line}>{line}</p>)}

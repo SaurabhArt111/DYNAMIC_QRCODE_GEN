@@ -366,3 +366,18 @@
     padding: 24px 16px;
   }
 }
+.file-row-collection {
+  border: 1px dashed var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+}
+
+.col-pdf-icon { color: var(--primary); flex-shrink: 0; }
+
+.col-pdf-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--primary);
+  color: white;
+  padding: 2px 7px;
+  border-radius: 20px;
+}

@@ -1,12 +1,11 @@
 import express from 'express';
 import QRCodeImage from 'qrcode';
-import xlsx from 'xlsx';
 import { requireAuth } from '../middleware/auth.js';
-import { qrUpload, excelUpload, handleUploadErrors } from '../middleware/upload.js';
+import { qrUpload, handleUploadErrors } from '../middleware/upload.js';
 import { QRCode } from '../models/QRCode.js';
 import { Upload } from '../models/Upload.js';
-import { RecycleBin } from '../models/RecycleBin.js';
 import { Collection } from '../models/Collection.js';
+import { RecycleBin } from '../models/RecycleBin.js';
 import { createVaultToken } from '../utils/tokens.js';
 import { getFileCategory } from '../utils/fileTypes.js';
 import { logActivity } from '../utils/activity.js';
@@ -21,38 +20,7 @@ function vaultUrl(token) {
 }
 
 function mapQr(qr) {
-  return {
-    ...qr,
-    vaultUrl: vaultUrl(qr.token)
-  };
-}
-
-function mapCollectionDefaultFile(collection) {
-  if (!collection?.defaultFile) return null;
-  return {
-    _id: `collection-default-${collection._id}`,
-    collectionId: collection._id,
-    originalName: collection.defaultFile.originalName,
-    storedName: collection.defaultFile.storedName,
-    mimeType: collection.defaultFile.mimeType,
-    sizeBytes: collection.defaultFile.sizeBytes,
-    category: collection.defaultFile.category,
-    order: Number.MAX_SAFE_INTEGER,
-    isCollectionDefault: true
-  };
-}
-
-async function listQrUploads(qr) {
-  const uploads = await Upload.find({ qrCode: qr._id }).sort({ order: 1 }).lean();
-  const collectionId = qr.collection?._id || qr.collection;
-  if (!collectionId) return uploads;
-
-  const collection =
-    qr.collection?.defaultFile !== undefined
-      ? qr.collection
-      : await Collection.findById(collectionId).lean();
-  const defaultFile = mapCollectionDefaultFile(collection);
-  return defaultFile ? [...uploads, defaultFile] : uploads;
+  return { ...qr, vaultUrl: vaultUrl(qr.token) };
 }
 
 async function createUniqueToken() {
@@ -75,18 +43,15 @@ async function recalculateSize(qrId) {
 async function moveQrToRecycle(qrId, adminId) {
   const qr = await QRCode.findById(qrId);
   if (!qr || qr.status === 'deleted') return null;
-
   qr.status = 'deleted';
   qr.deletedAt = new Date();
   await qr.save();
-
   await RecycleBin.updateOne(
     { qrCode: qr._id },
     { qrCode: qr._id, deletedBy: adminId, deletedAt: qr.deletedAt, snapshot: qr.toObject() },
     { upsert: true }
   );
   await logActivity('QR_DELETED', qr._id, `QR moved to recycle bin: ${qr.name}`);
-
   return qr;
 }
 
@@ -95,17 +60,18 @@ router.get('/', requireAuth, async (req, res) => {
   const limit = Math.min(Math.max(Number(req.query.limit || 12), 1), 50);
   const search = String(req.query.search || '').trim();
   const filter = String(req.query.filter || 'new');
+  const collectionId = req.query.collectionId || null;
   const query = { status: { $ne: 'deleted' } };
-
-  if (req.query.collection) {
-    query.collection = req.query.collection;
-  }
 
   if (search) {
     query.$or = [
       { name: { $regex: search, $options: 'i' } },
       { token: { $regex: search, $options: 'i' } }
     ];
+  }
+
+  if (collectionId) {
+    query.collection = collectionId;
   }
 
   const sorts = {
@@ -119,7 +85,6 @@ router.get('/', requireAuth, async (req, res) => {
 
   const [items, total] = await Promise.all([
     QRCode.find(query)
-      .populate('collection', 'name')
       .sort(sorts[filter] || sorts.new)
       .skip((page - 1) * limit)
       .limit(limit)
@@ -131,74 +96,99 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 router.post('/', requireAuth, async (req, res) => {
-  const { name, description, collection } = req.body;
+  const { name, description, collectionId } = req.body;
   if (!name) return res.status(400).json({ message: 'QR name is required.' });
-
-  if (collection) {
-    const exists = await Collection.exists({ _id: collection });
-    if (!exists) return res.status(404).json({ message: 'Collection not found.' });
-  }
 
   const qr = await QRCode.create({
     name,
     description,
-    collection: collection || undefined,
-    token: await createUniqueToken()
+    token: await createUniqueToken(),
+    collection: collectionId || null
   });
 
   await logActivity('QR_CREATED', qr._id, `QR created: ${qr.name}`);
   res.status(201).json(mapQr(qr.toObject()));
 });
 
-router.post('/bulk', requireAuth, excelUpload.single('file'), handleUploadErrors, async (req, res) => {
-  const workbook = xlsx.readFile(req.file.path);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = xlsx.utils.sheet_to_json(sheet);
-  const created = [];
+// Bulk create from folder uploads (multipart with multiple files under folder structure)
+router.post('/bulk-folder', requireAuth, qrUpload.any(), handleUploadErrors, async (req, res) => {
+  const { collectionId } = req.body;
+  const files = req.files || [];
 
-  for (const row of rows) {
-    const name = row['QR Name'] || row.name || row.Name;
-    const description = row.Description || row.description || '';
-    if (!name) continue;
-    created.push({
-      name: String(name),
-      description: String(description),
-      token: await createUniqueToken()
-    });
+  if (!files.length) return res.status(400).json({ message: 'No files uploaded.' });
+
+  // Group files by their folder (fieldname is used as folder name)
+  const folders = {};
+  for (const file of files) {
+    const folder = file.fieldname || 'Unnamed';
+    if (!folders[folder]) folders[folder] = [];
+    folders[folder].push(file);
   }
 
-  await removeUploadFile(req.file.path);
-  if (!created.length) return res.status(400).json({ message: 'No valid rows found.' });
+  const created = [];
+  const errors = [];
 
-  const docs = await QRCode.insertMany(created);
-  await logActivity('QR_CREATED', null, `Bulk generated ${docs.length} QR codes`);
-  res.status(201).json({ count: docs.length, items: docs.map((doc) => mapQr(doc.toObject())) });
+  for (const [folderName, folderFiles] of Object.entries(folders)) {
+    try {
+      const qr = await QRCode.create({
+        name: folderName,
+        description: '',
+        token: await createUniqueToken(),
+        collection: collectionId || null
+      });
+
+      const uploadDocs = folderFiles.map((file, index) => ({
+        qrCode: qr._id,
+        originalName: file.originalname,
+        storedName: file.filename,
+        mimeType: file.mimetype,
+        sizeBytes: file.size,
+        category: getFileCategory(file.mimetype),
+        path: file.path,
+        order: index
+      }));
+
+      await Upload.insertMany(uploadDocs);
+      await recalculateSize(qr._id);
+      await logActivity('QR_CREATED', qr._id, `QR created from folder: ${folderName}`);
+      created.push(mapQr(qr.toObject()));
+    } catch (err) {
+      errors.push({ folder: folderName, error: err.message });
+    }
+  }
+
+  res.status(201).json({ count: created.length, items: created, errors });
 });
 
 router.get('/:id', requireAuth, async (req, res) => {
-  const qr = await QRCode.findById(req.params.id).populate('collection').lean();
+  const qr = await QRCode.findById(req.params.id).lean();
   if (!qr || qr.status === 'deleted') return res.status(404).json({ message: 'QR not found.' });
-  const uploads = await listQrUploads(qr);
-  res.json({ qr: mapQr(qr), uploads });
+  const uploads = await Upload.find({ qrCode: qr._id }).sort({ order: 1 }).lean();
+
+  let collectionPdf = null;
+  if (qr.collection) {
+    const col = await Collection.findById(qr.collection).lean();
+    if (col && col.defaultPdf) {
+      collectionPdf = {
+        collectionId: col._id,
+        collectionName: col.name,
+        originalName: col.defaultPdf.originalName,
+        sizeBytes: col.defaultPdf.sizeBytes,
+        mimeType: col.defaultPdf.mimeType
+      };
+    }
+  }
+
+  res.json({ qr: mapQr(qr), uploads, collectionPdf });
 });
 
 router.put('/:id', requireAuth, async (req, res) => {
   const qr = await QRCode.findById(req.params.id);
   if (!qr || qr.status === 'deleted') return res.status(404).json({ message: 'QR not found.' });
-
-  if (req.body.collection !== undefined && req.body.collection !== '') {
-    const exists = await Collection.exists({ _id: req.body.collection });
-    if (!exists) return res.status(404).json({ message: 'Collection not found.' });
-    qr.collection = req.body.collection;
-  } else if (req.body.collection === '') {
-    qr.collection = undefined;
-  }
-
   qr.name = req.body.name || qr.name;
   qr.description = req.body.description ?? qr.description;
   qr.status = req.body.status || qr.status;
   await qr.save();
-
   await logActivity('QR_MODIFIED', qr._id, `QR modified: ${qr.name}`);
   res.json(mapQr(qr.toObject()));
 });
@@ -210,7 +200,7 @@ router.post('/:id/files', requireAuth, qrUpload.array('files', 4), handleUploadE
   const existing = await Upload.countDocuments({ qrCode: qr._id });
   if (existing + req.files.length > 4) {
     await Promise.all(req.files.map((file) => removeUploadFile(file.path)));
-    return res.status(400).json({ message: 'Each QR can contain a maximum of 4 uploaded files.' });
+    return res.status(400).json({ message: 'Each QR can contain a maximum of 4 files.' });
   }
 
   const docs = await Upload.insertMany(
@@ -231,15 +221,13 @@ router.post('/:id/files', requireAuth, qrUpload.array('files', 4), handleUploadE
 });
 
 router.put('/:id/files/reorder', requireAuth, async (req, res) => {
-  const qr = await QRCode.findById(req.params.id).populate('collection').lean();
+  const qr = await QRCode.findById(req.params.id);
   if (!qr || qr.status === 'deleted') return res.status(404).json({ message: 'QR not found.' });
 
-  const orderedIds = Array.isArray(req.body.uploadIds)
-    ? req.body.uploadIds.filter((uploadId) => !String(uploadId).startsWith('collection-default-'))
-    : [];
+  const orderedIds = Array.isArray(req.body.uploadIds) ? req.body.uploadIds : [];
   const uploads = await Upload.find({ qrCode: qr._id });
   const uploadIds = uploads.map((upload) => String(upload._id));
-  const hasSameUploads = orderedIds.length === uploadIds.length && uploadIds.every((uploadId) => orderedIds.includes(uploadId));
+  const hasSameUploads = orderedIds.length === uploadIds.length && uploadIds.every((id) => orderedIds.includes(id));
 
   if (!hasSameUploads) {
     return res.status(400).json({ message: 'Upload order does not match the QR files.' });
@@ -248,19 +236,13 @@ router.put('/:id/files/reorder', requireAuth, async (req, res) => {
   await Promise.all(
     orderedIds.map((uploadId, index) => Upload.updateOne({ _id: uploadId, qrCode: qr._id }, { order: index }))
   );
-  const reordered = await listQrUploads(qr);
+  const reordered = await Upload.find({ qrCode: qr._id }).sort({ order: 1 }).lean();
   res.json({ uploads: reordered });
 });
 
 router.put('/:id/files/:uploadId/replace', requireAuth, qrUpload.single('file'), handleUploadErrors, async (req, res) => {
-  if (String(req.params.uploadId).startsWith('collection-default-')) {
-    await removeUploadFile(req.file?.path);
-    return res.status(400).json({ message: 'Update the collection PDF from the Collections page.' });
-  }
-
   const upload = await Upload.findOne({ _id: req.params.uploadId, qrCode: req.params.id });
   if (!upload) return res.status(404).json({ message: 'Upload not found.' });
-
   await removeUploadFile(upload.path);
   upload.originalName = req.file.originalname;
   upload.storedName = req.file.filename;
@@ -269,19 +251,13 @@ router.put('/:id/files/:uploadId/replace', requireAuth, qrUpload.single('file'),
   upload.category = getFileCategory(req.file.mimetype);
   upload.path = req.file.path;
   await upload.save();
-
   await recalculateSize(upload.qrCode);
   res.json({ upload });
 });
 
 router.delete('/:id/files/:uploadId', requireAuth, async (req, res) => {
-  if (String(req.params.uploadId).startsWith('collection-default-')) {
-    return res.status(400).json({ message: 'Collection PDFs are managed from the Collections page.' });
-  }
-
   const upload = await Upload.findOneAndDelete({ _id: req.params.uploadId, qrCode: req.params.id });
   if (!upload) return res.status(404).json({ message: 'Upload not found.' });
-
   await removeUploadFile(upload.path);
   await recalculateSize(upload.qrCode);
   res.json({ message: 'File removed.' });

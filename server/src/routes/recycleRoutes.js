@@ -17,11 +17,7 @@ async function verifyPin(adminId, pin) {
 }
 
 router.get('/', requireAuth, async (req, res) => {
-  const items = await RecycleBin.find()
-    .sort({ deletedAt: -1 })
-    .populate('qrCode')
-    .lean();
-
+  const items = await RecycleBin.find().sort({ deletedAt: -1 }).populate('qrCode').lean();
   res.json({ items });
 });
 
@@ -29,7 +25,6 @@ router.post('/:id/restore', requireAuth, async (req, res) => {
   if (!(await verifyPin(req.admin._id, req.body.pin))) {
     return res.status(403).json({ message: 'Invalid recycle bin PIN.' });
   }
-
   const entry = await RecycleBin.findById(req.params.id).populate('qrCode');
   if (!entry || !entry.qrCode) return res.status(404).json({ message: 'Recycle item not found.' });
 
@@ -38,7 +33,6 @@ router.post('/:id/restore', requireAuth, async (req, res) => {
   await entry.qrCode.save();
   await RecycleBin.deleteOne({ _id: entry._id });
   await logActivity('QR_RESTORED', entry.qrCode._id, `QR restored: ${entry.qrCode.name}`);
-
   res.json({ message: 'QR restored.' });
 });
 
@@ -46,7 +40,6 @@ router.delete('/:id', requireAuth, async (req, res) => {
   if (!(await verifyPin(req.admin._id, req.body.pin))) {
     return res.status(403).json({ message: 'Invalid recycle bin PIN.' });
   }
-
   const entry = await RecycleBin.findById(req.params.id).populate('qrCode');
   if (!entry || !entry.qrCode) return res.status(404).json({ message: 'Recycle item not found.' });
 
@@ -56,7 +49,6 @@ router.delete('/:id', requireAuth, async (req, res) => {
   await QRCode.deleteOne({ _id: entry.qrCode._id });
   await RecycleBin.deleteOne({ _id: entry._id });
   await logActivity('QR_PURGED', entry.qrCode._id, `QR permanently deleted: ${entry.qrCode.name}`);
-
   res.json({ message: 'QR permanently deleted.' });
 });
 
