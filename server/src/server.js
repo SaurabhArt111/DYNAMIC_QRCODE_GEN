@@ -16,6 +16,12 @@ import { errorHandler, notFound } from './middleware/notFound.js';
 const app = express();
 const nodeEnv =  process.env.NODE_ENV || 'development';
 const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+const isBehindProxy = nodeEnv === 'production' || process.env.RENDER === 'true' || Boolean(process.env.RENDER_EXTERNAL_URL);
+
+if (isBehindProxy) {
+  app.set('trust proxy', 1);
+}
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(compression());
 app.use(cors({ origin: `${nodeEnv === 'development' ? `http://localhost:5173` : (clientUrl || 'http://localhost:5173')}`, credentials: true }));
