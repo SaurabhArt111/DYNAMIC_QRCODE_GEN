@@ -1,7 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+
 import { AuthProvider } from './context/AuthContext.jsx';
+
 import App from './App.jsx';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
@@ -12,33 +14,40 @@ import QRDetail from './pages/QRDetail.jsx';
 import RecycleBin from './pages/RecycleBin.jsx';
 import Settings from './pages/Settings.jsx';
 import Viewer from './pages/Viewer.jsx';
+
 import './styles/global.css';
 
-const router = createBrowserRouter([
-  { path: '/login', element: <Login /> },
-  { path: '/vault/:token', element: <Viewer /> },
+const router = createBrowserRouter(
+  [
+    { path: '/login', element: <Login /> },
+    { path: '/vault/:token', element: <Viewer /> },
+
+    {
+      path: '/',
+      element: <App />,
+      children: [
+        { index: true, element: <Dashboard /> },
+        { path: 'collections', element: <Collections /> },
+        { path: 'collections/:id', element: <CollectionDetail /> },
+        { path: 'qrcodes', element: <QRCodes /> },
+        { path: 'qrcodes/:id', element: <QRDetail /> },
+        { path: 'recycle-bin', element: <RecycleBin /> },
+        { path: 'settings', element: <Settings /> }
+      ]
+    }
+  ],
   {
-    path: '/',
-    element: <AuthProvider><App /></AuthProvider>,
-    children: [
-      { index: true, element: <Dashboard /> },
-      { path: 'collections', element: <Collections /> },
-      { path: 'collections/:id', element: <CollectionDetail /> },
-      { path: 'qrcodes', element: <QRCodes /> },
-      { path: 'qrcodes/:id', element: <QRDetail /> },
-      { path: 'recycle-bin', element: <RecycleBin /> },
-      { path: 'settings', element: <Settings /> }
-    ]
+    future: {
+      v7_relativeSplatPath: true,
+      v7_startTransition: true
+    }
   }
-], {
-  future: {
-    v7_relativeSplatPath: true,
-    v7_startTransition: true
-  }
-});
+);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </StrictMode>
 );
