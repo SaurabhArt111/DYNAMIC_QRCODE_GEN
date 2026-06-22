@@ -142,9 +142,7 @@ export default function QRCodes() {
           <option value="old">Old First</option>
           <option value="az">From A to Z</option>
           <option value="za">From Z to A</option>
-          <option value="popular">By Popularity</option>
           <option value="edited">Last Edit</option>
-          <option value="scanned">Last Scanned</option>
         </select>
         <button className="secondary-button" onClick={load} disabled={loading}><Search size={18} /> {loading ? 'Searching...' : 'Search'}</button>
       </div>
@@ -168,9 +166,9 @@ export default function QRCodes() {
             </div>
             <p>{qr.description || 'No description'}</p>
             <dl>
-              <div><dt>Scans</dt><dd>{qr.scanCount}</dd></div>
               <div><dt>Size</dt><dd>{formatBytes(qr.sizeBytes)}</dd></div>
               <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
+              <div><dt>Collection</dt><dd>{qr.collection?.name || 'None'}</dd></div>
             </dl>
             <div className="button-row">
               <Link className="primary-button" to={`/qrcodes/${qr._id}`}>Manage</Link>

@@ -2,24 +2,32 @@ import express from 'express';
 import path from 'path';
 import { QRCode } from '../models/QRCode.js';
 import { Upload } from '../models/Upload.js';
-import { Analytics } from '../models/Analytics.js';
 import { isPreviewableDocument } from '../utils/fileTypes.js';
 import { asyncRouter } from '../utils/asyncRouter.js';
 
 const router = asyncRouter(express.Router());
 
-function clientMeta(req) {
+function mapCollectionDefaultFile(collection) {
+  if (!collection?.defaultFile) return null;
   return {
-    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-    userAgent: req.headers['user-agent']
+    _id: `collection-default-${collection._id}`,
+    originalName: collection.defaultFile.originalName,
+    storedName: collection.defaultFile.storedName,
+    mimeType: collection.defaultFile.mimeType,
+    sizeBytes: collection.defaultFile.sizeBytes,
+    category: collection.defaultFile.category,
+    path: collection.defaultFile.path,
+    isCollectionDefault: true
   };
 }
 
 async function resolveVault(token) {
-  const qr = await QRCode.findOne({ token }).lean();
+  const qr = await QRCode.findOne({ token }).populate('collection').lean();
   if (!qr) return null;
   if (qr.status !== 'active') return { qr, uploads: [], unavailable: qr.status };
   const uploads = await Upload.find({ qrCode: qr._id }).sort({ order: 1 }).lean();
+  const defaultFile = mapCollectionDefaultFile(qr.collection);
+  if (defaultFile) uploads.push(defaultFile);
   return { qr, uploads, unavailable: null };
 }
 
@@ -33,14 +41,6 @@ router.get('/:token', async (req, res) => {
       message: vault.unavailable === 'deleted' ? 'This QR code has been deleted.' : 'This QR code is inactive.'
     });
   }
-
-  await Promise.all([
-    QRCode.updateOne(
-      { _id: vault.qr._id },
-      { $inc: { scanCount: 1 }, $set: { lastScannedAt: new Date() } }
-    ),
-    Analytics.create({ qrCode: vault.qr._id, event: 'scan', ...clientMeta(req) })
-  ]);
 
   res.json({
     status: 'active',
@@ -70,7 +70,6 @@ router.get('/:token/files/:uploadId/view', async (req, res) => {
   const upload = vault.uploads.find((item) => String(item._id) === req.params.uploadId);
   if (!upload) return res.status(404).json({ message: 'File not found.' });
 
-  await Analytics.create({ qrCode: vault.qr._id, upload: upload._id, event: 'view', ...clientMeta(req) });
   res.setHeader('Content-Type', upload.mimeType);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(path.resolve(upload.path));
@@ -83,7 +82,6 @@ router.get('/:token/files/:uploadId/download', async (req, res) => {
   const upload = vault.uploads.find((item) => String(item._id) === req.params.uploadId);
   if (!upload) return res.status(404).json({ message: 'File not found.' });
 
-  await Analytics.create({ qrCode: vault.qr._id, upload: upload._id, event: 'download', ...clientMeta(req) });
   res.download(path.resolve(upload.path), upload.originalName);
 });
 

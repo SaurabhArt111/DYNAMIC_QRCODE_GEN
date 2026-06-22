@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import App from './App.jsx';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import Collections from './pages/Collections.jsx';
 import QRCodes from './pages/QRCodes.jsx';
 import QRDetail from './pages/QRDetail.jsx';
 import RecycleBin from './pages/RecycleBin.jsx';
@@ -35,6 +36,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             }
           >
             <Route index element={<Dashboard />} />
+            <Route path="collections" element={<Collections />} />
             <Route path="qrcodes" element={<QRCodes />} />
             <Route path="qrcodes/:id" element={<QRDetail />} />
             <Route path="recycle-bin" element={<RecycleBin />} />

@@ -4,7 +4,7 @@ const activityLogSchema = new mongoose.Schema(
   {
     action: {
       type: String,
-      enum: ['QR_CREATED', 'QR_MODIFIED', 'QR_DELETED', 'QR_RESTORED', 'QR_PURGED', 'FILES_UPDATED'],
+      enum: ['QR_CREATED', 'QR_MODIFIED', 'QR_DELETED', 'QR_RESTORED', 'QR_PURGED'],
       required: true
     },
     qrCode: { type: mongoose.Schema.Types.ObjectId, ref: 'QRCode' },

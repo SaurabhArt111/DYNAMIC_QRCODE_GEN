@@ -132,6 +132,7 @@ export default function QRDetail() {
 
   function reorderFiles(fromIndex, toIndex) {
     if (fromIndex === null || fromIndex === toIndex || toIndex < 0 || toIndex >= data.uploads.length) return;
+    if (data.uploads[fromIndex]?.isCollectionDefault || data.uploads[toIndex]?.isCollectionDefault) return;
     const nextUploads = [...data.uploads];
     const [moved] = nextUploads.splice(fromIndex, 1);
     nextUploads.splice(toIndex, 0, moved);
@@ -145,6 +146,9 @@ export default function QRDetail() {
       </section>
     );
   }
+
+  const uploadedFileCount = data.uploads.filter((file) => !file.isCollectionDefault).length;
+  const uploadCapacity = Math.max(4 - uploadedFileCount, 0);
 
   return (
     <section className="page">
@@ -174,20 +178,20 @@ export default function QRDetail() {
             <div><dt>Created</dt><dd>{formatDate(data.qr.createdAt)}</dd></div>
             <div><dt>Updated</dt><dd>{formatDate(data.qr.updatedAt)}</dd></div>
             <div><dt>Total Size</dt><dd>{formatBytes(data.qr.sizeBytes)}</dd></div>
-            <div><dt>Scans</dt><dd>{data.qr.scanCount}</dd></div>
+            <div><dt>Collection</dt><dd>{data.qr.collection?.name || 'None'}</dd></div>
           </dl>
         </aside>
       </div>
       <section className="detail-panel files-panel">
         <div className="files-head">
           <h2>Files</h2>
-          <span className="file-count">{data.uploads.length} of 4</span>
+          <span className="file-count">{uploadedFileCount} of 4 uploaded</span>
         </div>
         
-        {data.uploads.length < 4 && (
+        {uploadCapacity > 0 && (
           <label className="drop-zone">
             <input hidden type="file" multiple onChange={(event) => {
-              Array.from(event.target.files || []).slice(0, 4 - data.uploads.length).forEach((file, idx) => {
+              Array.from(event.target.files || []).slice(0, uploadCapacity).forEach((file, idx) => {
                 setSelectedFiles((current) => current.map((item, i) => (i === idx && !item ? file : item)));
               });
               event.target.value = '';
@@ -237,7 +241,7 @@ export default function QRDetail() {
           {data.uploads.map((file, index) => (
             <article
               className={`file-row ${dragIndex === index ? 'dragging' : ''}`}
-              draggable
+              draggable={!file.isCollectionDefault}
               key={file._id}
               onDragStart={() => setDragIndex(index)}
               onDragOver={(event) => event.preventDefault()}
@@ -245,18 +249,18 @@ export default function QRDetail() {
               onDragEnd={() => setDragIndex(null)}
             >
               <div className="file-title">
-                <GripVertical size={18} aria-hidden="true" />
+                {!file.isCollectionDefault && <GripVertical size={18} aria-hidden="true" />}
                 <div>
                   <strong>{file.originalName}</strong>
-                  <span>{file.category} - {formatBytes(file.sizeBytes)}</span>
+                  <span>{file.isCollectionDefault ? 'Collection PDF' : file.category} - {formatBytes(file.sizeBytes)}</span>
                 </div>
               </div>
               <div className="file-actions">
-                <button className="icon-button" onClick={() => reorderFiles(index, index - 1)} disabled={index === 0 || busyAction === 'reorder'} title="Move up"><span>↑</span></button>
-                <button className="icon-button" onClick={() => reorderFiles(index, index + 1)} disabled={index === data.uploads.length - 1 || busyAction === 'reorder'} title="Move down"><span>↓</span></button>
+                {!file.isCollectionDefault && <button className="icon-button" onClick={() => reorderFiles(index, index - 1)} disabled={index === 0 || data.uploads[index - 1]?.isCollectionDefault || busyAction === 'reorder'} title="Move up"><span>↑</span></button>}
+                {!file.isCollectionDefault && <button className="icon-button" onClick={() => reorderFiles(index, index + 1)} disabled={index === data.uploads.length - 1 || data.uploads[index + 1]?.isCollectionDefault || busyAction === 'reorder'} title="Move down"><span>↓</span></button>}
                 <a className="icon-button" href={fileUrl(`/api/vault/${data.qr.token}/files/${file._id}/download`)} title="Download"><Download size={16} /></a>
-                <label className="icon-button" title="Replace file">{busyAction === `replace-${file._id}` ? '…' : '↻'}<input hidden type="file" onChange={(event) => replaceFile(file._id, event)} /></label>
-                <button className="icon-button danger" onClick={() => removeFile(file._id)} disabled={busyAction === `remove-${file._id}`} aria-label="Remove file"><Trash2 size={16} /></button>
+                {!file.isCollectionDefault && <label className="icon-button" title="Replace file">{busyAction === `replace-${file._id}` ? '…' : '↻'}<input hidden type="file" onChange={(event) => replaceFile(file._id, event)} /></label>}
+                {!file.isCollectionDefault && <button className="icon-button danger" onClick={() => removeFile(file._id)} disabled={busyAction === `remove-${file._id}`} aria-label="Remove file"><Trash2 size={16} /></button>}
               </div>
             </article>
           ))}

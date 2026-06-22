@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, Database, QrCode, ScanLine, TrendingUp } from 'lucide-react';
+import { Database, QrCode, TrendingUp } from 'lucide-react';
 import { api } from '../api/http.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './Dashboard.css';
@@ -14,8 +14,6 @@ export default function Dashboard() {
   const cards = [
     ['Total QR Codes', data?.totalQrCodes || 0, QrCode],
     ['Active QR Codes', data?.activeQrCodes || 0, TrendingUp],
-    ['Total Scans', data?.totalScans || 0, ScanLine],
-    ["Today's Scans", data?.todayScans || 0, Activity],
     ['Storage Usage', formatBytes(data?.storageUsageBytes || 0), Database]
   ];
 
