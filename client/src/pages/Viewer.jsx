@@ -184,7 +184,7 @@ export default function Viewer() {
                   <span>{file.category} - {formatBytes(file.sizeBytes)}</span>
                 </div>
                 <div className="toolbar-actions">
-                  <button className="icon-button" onClick={fullscreen} title="Fullscreen"><Maximize size={18} /></button>
+                  {/* <button className="icon-button" onClick={fullscreen} title="Fullscreen"><Maximize size={18} /></button> */}
                   {!fileError && <a className="icon-button" href={fileUrl(file.downloadUrl)} title="Download"><Download size={18} /></a>}
                 </div>
               </div>
