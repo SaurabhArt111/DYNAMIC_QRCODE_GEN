@@ -80,37 +80,46 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: 8px 14px;
+  gap: 14px;
+  padding: 10px 14px;
   min-height: auto;
-  flex-direction: column;
 }
 
 .toolbar-info {
   min-width: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
 }
 
 .toolbar-info strong {
   display: block;
   font-size: 0.9rem;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text);
+  line-height: 1.3;
 }
 
 .toolbar-info span {
   display: block;
   color: var(--muted);
   font-size: 0.75rem;
-  margin-top: 2px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 .toolbar-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex: 0 0 auto;
+  align-items: center;
 }
+
 
 .viewer-stage {
   min-height: 0;
