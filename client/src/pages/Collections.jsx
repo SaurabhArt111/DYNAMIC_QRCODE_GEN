@@ -80,6 +80,24 @@ export default function Collections() {
     }
   }
 
+  async function downloadCollectionZip(col) {
+    setBusy('zip');
+    setError('');
+    try {
+      const res = await api.get(`/collections/${col._id}/qr-images.zip`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${col?.name || 'collection'}-qr-images.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to download QR images.');
+    } finally {
+      setBusy('');
+    }
+  }
+
   const editingCol = modal?.edit;
 
   return (
@@ -119,6 +137,9 @@ export default function Collections() {
               <Link className="primary-button" to={`/collections/${col._id}`}>Open</Link>
               <button className="icon-button" title="Edit" onClick={() => openEdit(col)}><Edit2 size={16} /></button>
               <button className="icon-button danger" title="Delete" onClick={() => deleteCollection(col)}><Trash2 size={16} /></button>
+              <button className="icon-button" title="Download QR Images" onClick={() => downloadCollectionZip(col)} disabled={busy === 'zip'}>
+                {busy === 'zip' ? 'Downloading...' : 'Download QR Images'}
+              </button>
             </div>
           </article>
         ))}
