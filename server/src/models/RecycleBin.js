@@ -10,7 +10,7 @@ const recycleBinSchema = new mongoose.Schema(
     deletedAt: { type: Date, default: Date.now },
     snapshot: { type: Object, required: true }
   },
-  { timestamps: true, collection: 'recyclebin' }
+  { timestamps: true, collection: 'recyclebin', suppressReservedKeysWarning: true }
 );
 
 export const RecycleBin = mongoose.model('RecycleBin', recycleBinSchema);

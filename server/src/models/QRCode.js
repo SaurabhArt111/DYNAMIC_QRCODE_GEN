@@ -10,7 +10,7 @@ const qrCodeSchema = new mongoose.Schema(
     deletedAt: Date,
     collection: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection', default: null }
   },
-  { timestamps: true, collection: 'qrcodes' }
+  { timestamps: true, collection: 'qrcodes', suppressReservedKeysWarning: true }
 );
 
 qrCodeSchema.index({ name: 'text', token: 'text' });
