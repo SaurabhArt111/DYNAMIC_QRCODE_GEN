@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Plus, Trash2, Edit2, FileText } from 'lucide-react';
+import { FolderOpen, Plus, Trash2, Edit2, FileText, Download } from 'lucide-react';
 import { api } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
 import { formatBytes, formatDate } from '../utils/format.js';
