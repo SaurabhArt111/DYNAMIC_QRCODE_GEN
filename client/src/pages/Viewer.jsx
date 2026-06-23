@@ -15,6 +15,7 @@ export default function Viewer() {
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState('');
   const contentRef = useRef(null);
+  const swipeRef = useRef({ x: 0, y: 0, active: false });
 
   useEffect(() => {
     let mounted = true;
@@ -81,6 +82,35 @@ export default function Viewer() {
     contentRef.current?.requestFullscreen?.();
   }
 
+  function selectFile(index) {
+    if (!vault?.uploads?.[index]) return;
+    if (active !== index) setFileLoading(true);
+    setFileError('');
+    setActive(index);
+    setZoom(1);
+  }
+
+  function onTouchStart(event) {
+    if (vault?.uploads?.length < 2) return;
+    const touch = event.touches[0];
+    swipeRef.current = { x: touch.clientX, y: touch.clientY, active: true };
+  }
+
+  function onTouchEnd(event) {
+    const swipe = swipeRef.current;
+    swipeRef.current = { x: 0, y: 0, active: false };
+    if (!swipe.active || vault?.uploads?.length < 2) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - swipe.x;
+    const deltaY = touch.clientY - swipe.y;
+    const horizontalSwipe = Math.abs(deltaX) > 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.35;
+
+    if (!horizontalSwipe) return;
+    const nextIndex = deltaX < 0 ? active + 1 : active - 1;
+    selectFile(Math.min(Math.max(nextIndex, 0), vault.uploads.length - 1));
+  }
+
   if (status === 'loading') {
     return <main className="viewer-page"><div className="viewer-loading"><span className="spinner" /> Loading secure vault...</div></main>;
   }
@@ -119,18 +149,13 @@ export default function Viewer() {
       <section className="viewer-layout">
         <aside className="viewer-list">
           {vault.uploads.map((item, index) => (
-            <button className={active === index ? 'active' : ''} key={item.id} onClick={() => {
-              if (active !== index) setFileLoading(true);
-              setFileError('');
-              setActive(index);
-              setZoom(1);
-            }}>
+            <button className={active === index ? 'active' : ''} key={item.id} onClick={() => selectFile(index)}>
               <strong>File {index + 1}</strong>
               <span>{item.originalName}</span>
             </button>
           ))}
         </aside>
-        <section className="viewer-content">
+        <section className="viewer-content" onTouchStartCapture={onTouchStart} onTouchEndCapture={onTouchEnd}>
           {file ? (
             <>
               <div className="viewer-toolbar">
@@ -185,12 +210,7 @@ export default function Viewer() {
       {vault.uploads.length > 1 && (
         <nav className="mobile-file-nav">
           {vault.uploads.map((item, index) => (
-            <button className={active === index ? 'active' : ''} key={item.id} onClick={() => {
-              if (active !== index) setFileLoading(true);
-              setFileError('');
-              setActive(index);
-              setZoom(1);
-            }} aria-label={`Show file ${index + 1}`}>
+            <button className={active === index ? 'active' : ''} key={item.id} onClick={() => selectFile(index)} aria-label={`Show file ${index + 1}`}>
               <span className="mobile-file-dot" />
             </button>
           ))}
