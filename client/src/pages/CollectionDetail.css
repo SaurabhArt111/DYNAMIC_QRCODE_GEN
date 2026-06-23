@@ -41,6 +41,16 @@
 }
 .bulk-folder-header span { color: var(--muted); }
 
+.bulk-parent-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.bulk-parent-note span { color: var(--danger, #dc2626); font-weight: 700; }
+
 .bulk-folder-row {
   display: flex;
   align-items: center;

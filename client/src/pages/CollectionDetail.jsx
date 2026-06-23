@@ -22,6 +22,8 @@ export default function CollectionDetail() {
 
   // Bulk folder state
   const [bulkFolders, setBulkFolders] = useState([]); // [{name, files:[]}]
+  const [bulkParentName, setBulkParentName] = useState('');
+  const [bulkSkippedFiles, setBulkSkippedFiles] = useState(0);
   const [bulkResults, setBulkResults] = useState(null);
   const [bulkProgress, setBulkProgress] = useState(null);
   const folderInputRef = useRef(null);
@@ -80,16 +82,36 @@ export default function CollectionDetail() {
   function onFolderInput(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    // Group by webkitRelativePath first segment (folder name)
+
+    // Group by the first child folder inside the selected parent folder.
     const map = {};
+    let parentName = '';
+    let skippedFiles = 0;
+
     for (const file of files) {
-      const parts = file.webkitRelativePath.split('/');
-      const folder = parts[0];
+      const parts = (file.webkitRelativePath || file.name).split('/').filter(Boolean);
+      if (!parentName && parts[0]) parentName = parts[0];
+
+      if (parts.length < 3) {
+        skippedFiles += 1;
+        continue;
+      }
+
+      const folder = parts[1];
       if (!map[folder]) map[folder] = [];
       map[folder].push(file);
     }
-    const folders = Object.entries(map).map(([name, fls]) => ({ name, files: fls }));
+
+    const folders = Object.entries(map)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, fls]) => ({
+        name,
+        files: fls.sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name))
+      }));
+
     setBulkFolders(folders);
+    setBulkParentName(parentName);
+    setBulkSkippedFiles(skippedFiles);
     setBulkResults(null);
     e.target.value = '';
   }
@@ -128,6 +150,8 @@ export default function CollectionDetail() {
     setBulkProgress(null);
     setBusy('');
     setBulkFolders([]);
+    setBulkParentName('');
+    setBulkSkippedFiles(0);
     await load();
   }
 
@@ -147,7 +171,7 @@ export default function CollectionDetail() {
           )}
         </div>
         <div className="button-row">
-          <button className="secondary-button" onClick={() => { setModal('bulk'); setBulkResults(null); setBulkFolders([]); }}>
+          <button className="secondary-button" onClick={() => { setModal('bulk'); setBulkResults(null); setBulkFolders([]); setBulkParentName(''); setBulkSkippedFiles(0); }}>
             <FolderUp size={18} /> Bulk Create
           </button>
           <button className="primary-button" onClick={() => { setForm({ name: '', description: '' }); setError(''); setModal('create'); }}>
@@ -216,9 +240,9 @@ export default function CollectionDetail() {
 
       {/* Bulk Create Modal */}
       {modal === 'bulk' && (
-        <Modal title="Bulk Create from Folders" onClose={() => { setModal(null); setBulkFolders([]); setBulkResults(null); }}>
+        <Modal title="Bulk Create from Folders" onClose={() => { setModal(null); setBulkFolders([]); setBulkResults(null); setBulkParentName(''); setBulkSkippedFiles(0); }}>
           <div className="bulk-modal">
-            <p className="bulk-intro">Select one or more folders. Each folder becomes a QR code — the folder name becomes the QR title, and all files inside are uploaded to that QR.</p>
+            <p className="bulk-intro">Select one parent folder. Each child folder inside it becomes a QR code - the child folder name becomes the QR title, and all files inside that child folder are uploaded to that QR.</p>
 
             <input
               ref={folderInputRef}
@@ -232,15 +256,21 @@ export default function CollectionDetail() {
             {!bulkResults && (
               <>
                 <button className="secondary-button bulk-pick-btn" onClick={() => folderInputRef.current?.click()}>
-                  <FolderUp size={18} /> {bulkFolders.length ? `${bulkFolders.length} folder(s) selected — Add more` : 'Select Folder(s)'}
+                  <FolderUp size={18} /> {bulkFolders.length ? `${bulkFolders.length} child folder(s) selected - Choose different parent` : 'Select Parent Folder'}
                 </button>
 
                 {bulkFolders.length > 0 && (
                   <div className="bulk-folder-list">
                     <div className="bulk-folder-header">
-                      <strong>{bulkFolders.length} folder(s) queued</strong>
+                      <strong>{bulkFolders.length} child folder(s) queued</strong>
                       <span>{bulkFolders.reduce((s, f) => s + f.files.length, 0)} files total</span>
                     </div>
+                    {bulkParentName && (
+                      <div className="bulk-parent-note">
+                        Parent folder: <strong>{bulkParentName}</strong>
+                        {bulkSkippedFiles > 0 && <span>{bulkSkippedFiles} direct parent file(s) skipped</span>}
+                      </div>
+                    )}
                     {bulkFolders.map((f) => (
                       <div className="bulk-folder-row" key={f.name}>
                         <div>
@@ -261,7 +291,7 @@ export default function CollectionDetail() {
                 )}
 
                 <div className="button-row">
-                  <button className="secondary-button" onClick={() => setModal(null)}>Cancel</button>
+                  <button className="secondary-button" onClick={() => { setModal(null); setBulkFolders([]); setBulkParentName(''); setBulkSkippedFiles(0); }}>Cancel</button>
                   <button
                     className="primary-button"
                     onClick={runBulkCreate}
@@ -290,7 +320,7 @@ export default function CollectionDetail() {
                     </div>
                   ))}
                 </div>
-                <button className="primary-button" onClick={() => { setModal(null); setBulkResults(null); }}>Done</button>
+                <button className="primary-button" onClick={() => { setModal(null); setBulkResults(null); setBulkParentName(''); setBulkSkippedFiles(0); }}>Done</button>
               </div>
             )}
           </div>
