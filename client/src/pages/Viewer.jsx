@@ -171,6 +171,7 @@ export default function Viewer() {
           )}
         </section>
       </section>
+      {/* mobile file navigation */}
       {vault.uploads.length > 1 && (
         <nav className="mobile-file-nav">
           {vault.uploads.map((item, index) => (
@@ -179,8 +180,8 @@ export default function Viewer() {
               setFileError('');
               setActive(index);
               setZoom(1);
-            }}>
-              File {index + 1}
+              }}>
+              {/* File {index + 1} */}
             </button>
           ))}
         </nav>

@@ -120,12 +120,15 @@
 .file-missing-state {
   color: var(--muted);
 }
+
 .file-missing-state svg {
   color: #b42318;
 }
+
 .file-missing-state strong {
   color: var(--text);
 }
+
 .file-missing-state span {
   max-width: 360px;
   line-height: 1.5;
@@ -187,6 +190,7 @@
   .mobile-file-nav button {
     text-align: center;
     padding: 10px 4px;
+    border-radius: 50%;
     font-weight: 800;
   }
 }
@@ -196,6 +200,7 @@
   justify-content: space-around;
   gap: 8px;
 }
+
 .viewer-status-page {
   min-height: 100vh;
   display: grid;
