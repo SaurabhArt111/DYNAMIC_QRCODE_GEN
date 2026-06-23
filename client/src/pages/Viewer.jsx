@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { AlertTriangle, Download, ExternalLink, Maximize, ZoomIn, ZoomOut } from 'lucide-react';
+import { AlertTriangle, Download, ExternalLink, Maximize } from 'lucide-react';
 import { api, fileUrl } from '../api/http.js';
 import { formatBytes } from '../utils/format.js';
 import './Viewer.css';
@@ -11,11 +11,10 @@ export default function Viewer() {
   const [status, setStatus] = useState('loading');
   const [message, setMessage] = useState('');
   const [active, setActive] = useState(0);
-  const [zoom, setZoom] = useState(1);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState('');
   const contentRef = useRef(null);
-  const swipeRef = useRef({ x: 0, y: 0, active: false });
+  const swipeRef = useRef({ x: 0, y: 0, time: 0, active: false });
 
   useEffect(() => {
     let mounted = true;
@@ -55,7 +54,7 @@ export default function Viewer() {
     setFileError('');
     setFileLoading(canPreview);
 
-    if (!file || !canPreview) return () => {};
+    if (!file || !canPreview) return () => { };
 
     fetch(src, { method: 'HEAD' })
       .then((res) => {
@@ -87,32 +86,53 @@ export default function Viewer() {
     if (active !== index) setFileLoading(true);
     setFileError('');
     setActive(index);
-    setZoom(1);
   }
 
   function onTouchStart(event) {
     if (vault?.uploads?.length < 2) return;
     const touch = event.touches[0];
-    swipeRef.current = { x: touch.clientX, y: touch.clientY, active: true };
+    swipeRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+      active: true
+    };
   }
 
   function onTouchEnd(event) {
     const swipe = swipeRef.current;
-    swipeRef.current = { x: 0, y: 0, active: false };
+    swipeRef.current = { x: 0, y: 0, time: 0, active: false };
     if (!swipe.active || vault?.uploads?.length < 2) return;
 
     const touch = event.changedTouches[0];
     const deltaX = touch.clientX - swipe.x;
     const deltaY = touch.clientY - swipe.y;
-    const horizontalSwipe = Math.abs(deltaX) > 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.35;
+    const elapsed = Date.now() - swipe.time;
+
+    // More lenient swipe detection: 40px min distance or 60px/s velocity
+    const minDistance = 40;
+    const velocity = Math.abs(deltaX) / (elapsed || 1);
+    const horizontalSwipe = Math.abs(deltaX) > minDistance &&
+      Math.abs(deltaX) > Math.abs(deltaY) * 1.2 &&
+      velocity > 0.15;
 
     if (!horizontalSwipe) return;
+
     const nextIndex = deltaX < 0 ? active + 1 : active - 1;
     selectFile(Math.min(Math.max(nextIndex, 0), vault.uploads.length - 1));
   }
 
   if (status === 'loading') {
-    return <main className="viewer-page"><div className="viewer-loading"><span className="spinner" /> Loading secure vault...</div></main>;
+    return (
+      <main className="viewer-page">
+        <div className="viewer-loading">
+          <div className="loader-spinner">
+            <span className="spinner" />
+          </div>
+          <span>Loading secure vault...</span>
+        </div>
+      </main>
+    );
   }
 
   if (status === 'deleted' || status === 'inactive' || status === 'missing') {
@@ -159,19 +179,22 @@ export default function Viewer() {
           {file ? (
             <>
               <div className="viewer-toolbar">
-                <div>
+                <div className="toolbar-info">
                   <strong>{file.originalName}</strong>
                   <span>{file.category} - {formatBytes(file.sizeBytes)}</span>
                 </div>
-                <div className="button-row-view">
-                  {!fileError && (file.category === 'image' || file.category === 'pdf') && <button className="icon-button" onClick={() => setZoom(Math.max(0.5, zoom - 0.2))} title="Zoom out"><ZoomOut size={18} /></button>}
-                  {!fileError && (file.category === 'image' || file.category === 'pdf') && <button className="icon-button" onClick={() => setZoom(Math.min(2.5, zoom + 0.2))} title="Zoom in"><ZoomIn size={18} /></button>}
+                <div className="toolbar-actions">
                   <button className="icon-button" onClick={fullscreen} title="Fullscreen"><Maximize size={18} /></button>
-                  {!fileError && <a className="primary-button" href={fileUrl(file.downloadUrl)}><Download size={18} /> Download</a>}
+                  {!fileError && <a className="icon-button" href={fileUrl(file.downloadUrl)} title="Download"><Download size={18} /></a>}
                 </div>
               </div>
               <div className="viewer-stage" ref={contentRef}>
-                {fileLoading && <div className="viewer-stage-loading"><span className="spinner" /> Loading file...</div>}
+                {fileLoading && (
+                  <div className="viewer-stage-loading">
+                    <div className="loader-pulse" />
+                    <span>Loading file...</span>
+                  </div>
+                )}
                 {fileError && (
                   <div className="file-missing-state">
                     <AlertTriangle size={34} />
@@ -179,11 +202,11 @@ export default function Viewer() {
                     <span>{fileError}</span>
                   </div>
                 )}
-                {!fileError && file.category === 'image' && <img src={src} style={{ transform: `scale(${zoom})` }} alt={file.originalName} onLoad={() => setFileLoading(false)} onError={() => { setFileError('This image has been deleted, removed, or is no longer available.'); setFileLoading(false); }} />}
+                {!fileError && file.category === 'image' && <img src={src} alt={file.originalName} onLoad={() => setFileLoading(false)} onError={() => { setFileError('This image has been deleted, removed, or is no longer available.'); setFileLoading(false); }} />}
                 {!fileError && file.category === 'video' && <video src={src} controls playsInline onLoadedData={() => setFileLoading(false)} onError={() => { setFileError('This video has been deleted, removed, or is no longer available.'); setFileLoading(false); }} />}
                 {!fileError && file.category === 'audio' && <audio src={src} controls onLoadedMetadata={() => setFileLoading(false)} onError={() => { setFileError('This audio file has been deleted, removed, or is no longer available.'); setFileLoading(false); }} />}
                 {!fileError && file.category === 'pdf' && (
-                  <object className="pdf-viewer-frame" data={src} type="application/pdf" style={{ transform: `scale(${zoom})` }} onLoad={() => setFileLoading(false)}>
+                  <object className="pdf-viewer-frame" data={src} type="application/pdf" onLoad={() => setFileLoading(false)}>
                     <div className="document-fallback">
                       <ExternalLink size={34} />
                       <strong>PDF preview is not available on this device.</strong>
