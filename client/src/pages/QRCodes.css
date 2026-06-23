@@ -75,7 +75,7 @@
 
 .qr-card dd {
   margin: 4px 0 0;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .qr-card-skeleton {
@@ -119,7 +119,7 @@
   color: var(--muted);
   background: var(--surface);
   text-align: center;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 @keyframes qrSkeleton {
