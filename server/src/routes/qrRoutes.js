@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import QRCodeImage from 'qrcode';
 import { requireAuth } from '../middleware/auth.js';
 import { qrUpload, handleUploadErrors } from '../middleware/upload.js';
@@ -21,6 +22,15 @@ function vaultUrl(token) {
 
 function mapQr(qr) {
   return { ...qr, vaultUrl: vaultUrl(qr.token) };
+}
+
+function filenameTitle(fileName) {
+  const baseName = String(fileName || '').replace(/\\/g, '/').split('/').pop();
+  return path.parse(baseName).name.trim();
+}
+
+function matchKey(value) {
+  return String(value || '').trim().toLowerCase();
 }
 
 async function createUniqueToken() {
@@ -169,6 +179,155 @@ router.post('/bulk-folder', requireAuth, qrUpload.any(), handleUploadErrors, asy
   }
 
   res.status(201).json({ count: created.length, items: created, errors });
+});
+
+// Bulk Create 2, step 1: each primary file creates one QR and is attached to it.
+router.post('/bulk-create-2/primary', requireAuth, qrUpload.array('files', 500), handleUploadErrors, async (req, res) => {
+  const { collectionId } = req.body;
+  const files = req.files || [];
+
+  if (!files.length) return res.status(400).json({ message: 'No primary files uploaded.' });
+  if (collectionId) {
+    const collection = await Collection.findOne({ _id: collectionId, status: { $ne: 'deleted' } }).lean();
+    if (!collection) {
+      await Promise.all(files.map((file) => removeUploadFile(file.path).catch(() => {})));
+      return res.status(404).json({ message: 'Collection not found.' });
+    }
+  }
+
+  const seenTitles = new Set();
+  const duplicateTitles = new Set();
+  for (const file of files) {
+    const title = filenameTitle(file.originalname);
+    const key = matchKey(title);
+    if (!title) {
+      await Promise.all(files.map((uploadedFile) => removeUploadFile(uploadedFile.path).catch(() => {})));
+      return res.status(400).json({ message: 'Every primary file must have a filename.' });
+    }
+    if (seenTitles.has(key)) duplicateTitles.add(title);
+    seenTitles.add(key);
+  }
+
+  if (duplicateTitles.size) {
+    await Promise.all(files.map((file) => removeUploadFile(file.path).catch(() => {})));
+    return res.status(400).json({
+      message: 'Primary filenames must be unique when file extensions are ignored.',
+      duplicates: Array.from(duplicateTitles)
+    });
+  }
+
+  const created = [];
+  const errors = [];
+
+  for (const file of files) {
+    const title = filenameTitle(file.originalname);
+    try {
+      const qr = await QRCode.create({
+        name: title,
+        description: '',
+        token: await createUniqueToken(),
+        collection: collectionId || null
+      });
+
+      await Upload.create({
+        qrCode: qr._id,
+        originalName: file.originalname,
+        storedName: file.filename,
+        mimeType: file.mimetype,
+        sizeBytes: file.size,
+        category: getFileCategory(file.mimetype),
+        path: file.path,
+        order: 0
+      });
+
+      await recalculateSize(qr._id);
+      await logActivity('QR_CREATED', qr._id, `QR created from primary file: ${title}`);
+      created.push(mapQr(qr.toObject()));
+    } catch (err) {
+      await removeUploadFile(file.path).catch(() => {});
+      errors.push({ file: file.originalname, error: err.message });
+    }
+  }
+
+  res.status(201).json({ count: created.length, items: created, errors });
+});
+
+// Bulk Create 2, step 2: attach associated files by matching filename base to QR title.
+router.post('/bulk-create-2/associated', requireAuth, qrUpload.array('files', 500), handleUploadErrors, async (req, res) => {
+  const { collectionId } = req.body;
+  const files = req.files || [];
+  let qrIds = [];
+
+  try {
+    qrIds = JSON.parse(req.body.qrIds || '[]');
+  } catch {
+    qrIds = [];
+  }
+
+  if (!files.length) return res.status(400).json({ message: 'No associated files uploaded.' });
+  if (!Array.isArray(qrIds) || !qrIds.length) {
+    await Promise.all(files.map((file) => removeUploadFile(file.path).catch(() => {})));
+    return res.status(400).json({ message: 'No QR batch supplied for matching.' });
+  }
+
+  const qrQuery = { _id: { $in: qrIds }, status: { $ne: 'deleted' } };
+  if (collectionId) qrQuery.collection = collectionId;
+  const qrs = await QRCode.find(qrQuery).lean();
+  if (!qrs.length) {
+    await Promise.all(files.map((file) => removeUploadFile(file.path).catch(() => {})));
+    return res.status(404).json({ message: 'No matching QR codes found for this batch.' });
+  }
+
+  const qrByTitle = new Map(qrs.map((qr) => [matchKey(qr.name), qr]));
+  const qrObjectIds = qrs.map((qr) => qr._id);
+  const existingCounts = await Upload.aggregate([
+    { $match: { qrCode: { $in: qrObjectIds }, status: { $ne: 'deleted' } } },
+    { $group: { _id: '$qrCode', count: { $sum: 1 } } }
+  ]);
+  const nextOrderByQr = new Map(existingCounts.map((item) => [String(item._id), item.count]));
+  const uploadDocs = [];
+  const matchedQrIds = new Set();
+  const unmatched = [];
+
+  for (const file of files) {
+    const title = filenameTitle(file.originalname);
+    const qr = qrByTitle.get(matchKey(title));
+
+    if (!qr) {
+      unmatched.push(file.originalname);
+      await removeUploadFile(file.path).catch(() => {});
+      continue;
+    }
+
+    const qrId = String(qr._id);
+    const order = nextOrderByQr.get(qrId) || 0;
+    nextOrderByQr.set(qrId, order + 1);
+    matchedQrIds.add(qrId);
+    uploadDocs.push({
+      qrCode: qr._id,
+      originalName: file.originalname,
+      storedName: file.filename,
+      mimeType: file.mimetype,
+      sizeBytes: file.size,
+      category: getFileCategory(file.mimetype),
+      path: file.path,
+      order
+    });
+  }
+
+  if (uploadDocs.length) {
+    await Upload.insertMany(uploadDocs);
+    await Promise.all(Array.from(matchedQrIds).map((qrId) => recalculateSize(qrId)));
+    await Promise.all(
+      Array.from(matchedQrIds).map((qrId) => logActivity('QR_MODIFIED', qrId, 'Associated files added by Bulk Create 2'))
+    );
+  }
+
+  res.status(201).json({
+    matched: uploadDocs.length,
+    unmatched,
+    qrMatched: matchedQrIds.size
+  });
 });
 
 router.get('/:id', requireAuth, async (req, res) => {

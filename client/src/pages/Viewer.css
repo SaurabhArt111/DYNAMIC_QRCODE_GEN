@@ -78,7 +78,7 @@
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: flex-start;
   align-items: stretch;
   gap: 8px;
@@ -332,7 +332,7 @@
   }
 
   .viewer-toolbar {
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 8px;
     padding: 8px 12px;
   }

@@ -28,6 +28,14 @@ export default function CollectionDetail() {
   const [bulkProgress, setBulkProgress] = useState(null);
   const folderInputRef = useRef(null);
 
+  // Bulk Create 2 state
+  const [bulk2PrimaryFiles, setBulk2PrimaryFiles] = useState([]);
+  const [bulk2AssociatedFiles, setBulk2AssociatedFiles] = useState([]);
+  const [bulk2Created, setBulk2Created] = useState([]);
+  const [bulk2Result, setBulk2Result] = useState(null);
+  const primaryInputRef = useRef(null);
+  const associatedInputRef = useRef(null);
+
   async function load() {
     setLoading(true);
     try {
@@ -138,6 +146,35 @@ export default function CollectionDetail() {
     setBulkFolders((prev) => prev.filter((f) => f.name !== name));
   }
 
+  function resetBulk2() {
+    setBulk2PrimaryFiles([]);
+    setBulk2AssociatedFiles([]);
+    setBulk2Created([]);
+    setBulk2Result(null);
+  }
+
+  function fileTitle(file) {
+    return file.name.replace(/\.[^/.]+$/, '');
+  }
+
+  function onBulk2PrimaryInput(e) {
+    const files = Array.from(e.target.files || [])
+      .sort((a, b) => a.name.localeCompare(b.name));
+    setBulk2PrimaryFiles(files);
+    setBulk2Created([]);
+    setBulk2AssociatedFiles([]);
+    setBulk2Result(null);
+    e.target.value = '';
+  }
+
+  function onBulk2AssociatedInput(e) {
+    const files = Array.from(e.target.files || [])
+      .sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name));
+    setBulk2AssociatedFiles(files);
+    setBulk2Result(null);
+    e.target.value = '';
+  }
+
   async function runBulkCreate() {
     if (!bulkFolders.length) return;
     setBusy('bulk');
@@ -173,6 +210,50 @@ export default function CollectionDetail() {
     await load();
   }
 
+  async function runBulkCreate2Primary() {
+    if (!bulk2PrimaryFiles.length) return;
+    setBusy('bulk2-primary');
+    setError('');
+    try {
+      const fd = new FormData();
+      fd.append('collectionId', id);
+      for (const file of bulk2PrimaryFiles) {
+        fd.append('files', file, file.name);
+      }
+      const { data } = await api.post('/qrcodes/bulk-create-2/primary', fd);
+      setBulk2Created(data.items || []);
+      setBulk2Result({ phase: 'primary', errors: data.errors || [] });
+      setBulk2PrimaryFiles([]);
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create QR codes from primary files.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function runBulkCreate2Associated() {
+    if (!bulk2Created.length || !bulk2AssociatedFiles.length) return;
+    setBusy('bulk2-associated');
+    setError('');
+    try {
+      const fd = new FormData();
+      fd.append('collectionId', id);
+      fd.append('qrIds', JSON.stringify(bulk2Created.map((qr) => qr._id)));
+      for (const file of bulk2AssociatedFiles) {
+        fd.append('files', file, file.name);
+      }
+      const { data } = await api.post('/qrcodes/bulk-create-2/associated', fd);
+      setBulk2Result({ phase: 'associated', ...data });
+      setBulk2AssociatedFiles([]);
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to attach associated files.');
+    } finally {
+      setBusy('');
+    }
+  }
+
   if (!col && !loading) return null;
 
   return (
@@ -194,6 +275,9 @@ export default function CollectionDetail() {
           </button>
           <button className="secondary-button" onClick={() => { setModal('bulk'); setBulkResults(null); setBulkFolders([]); setBulkParentName(''); setBulkSkippedFiles(0); }}>
             <FolderUp size={18} /> Bulk Create
+          </button>
+          <button className="secondary-button" onClick={() => { resetBulk2(); setError(''); setModal('bulk2'); }}>
+            <FolderUp size={18} /> Bulk Create 2
           </button>
           <button className="primary-button" onClick={() => { setForm({ name: '', description: '' }); setError(''); setModal('create'); }}>
             <Plus size={18} /> Create QR
@@ -343,6 +427,128 @@ export default function CollectionDetail() {
                   ))}
                 </div>
                 <button className="primary-button" onClick={() => { setModal(null); setBulkResults(null); setBulkParentName(''); setBulkSkippedFiles(0); }}>Done</button>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Bulk Create 2 Modal */}
+      {modal === 'bulk2' && (
+        <Modal title="Bulk Create 2" onClose={() => { setModal(null); resetBulk2(); }}>
+          <div className="bulk-modal">
+            {error && <div className="error-box">{error}</div>}
+            <p className="bulk-intro">Upload primary files first. Each file creates one QR code using the filename without its extension as the title. After that, upload an associated folder and matching files will attach to those QR codes by filename only.</p>
+
+            <input
+              ref={primaryInputRef}
+              type="file"
+              multiple
+              hidden
+              onChange={onBulk2PrimaryInput}
+            />
+            <input
+              ref={associatedInputRef}
+              type="file"
+              webkitdirectory="true"
+              multiple
+              hidden
+              onChange={onBulk2AssociatedInput}
+            />
+
+            <div className="bulk-step">
+              <div className="bulk-step-header">
+                <strong>1. Primary files</strong>
+                <span>{bulk2Created.length ? `${bulk2Created.length} QR code(s) created` : `${bulk2PrimaryFiles.length} file(s) selected`}</span>
+              </div>
+              {!bulk2Created.length && (
+                <>
+                  <button className="secondary-button bulk-pick-btn" onClick={() => primaryInputRef.current?.click()}>
+                    <FolderUp size={18} /> {bulk2PrimaryFiles.length ? 'Choose different primary files' : 'Select Primary Files'}
+                  </button>
+                  {bulk2PrimaryFiles.length > 0 && (
+                    <div className="bulk-folder-list bulk-file-list">
+                      {bulk2PrimaryFiles.map((file) => (
+                        <div className="bulk-folder-row" key={`${file.name}-${file.size}`}>
+                          <div>
+                            <strong>{fileTitle(file)}</strong>
+                            <span>{file.name}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    className="primary-button"
+                    onClick={runBulkCreate2Primary}
+                    disabled={!bulk2PrimaryFiles.length || busy === 'bulk2-primary'}
+                  >
+                    {busy === 'bulk2-primary' ? 'Creating...' : `Create ${bulk2PrimaryFiles.length} QR Code(s)`}
+                  </button>
+                </>
+              )}
+              {bulk2Created.length > 0 && (
+                <div className="bulk-folder-list bulk-file-list">
+                  {bulk2Created.map((qr) => (
+                    <div className="bulk-result-row ok" key={qr._id}>
+                      <CheckCircle2 size={15} />
+                      <strong>{qr.name}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {bulk2Created.length > 0 && (
+              <div className="bulk-step">
+                <div className="bulk-step-header">
+                  <strong>2. Associated folder</strong>
+                  <span>{bulk2AssociatedFiles.length} file(s) selected</span>
+                </div>
+                <button className="secondary-button bulk-pick-btn" onClick={() => associatedInputRef.current?.click()}>
+                  <FolderUp size={18} /> {bulk2AssociatedFiles.length ? 'Choose different associated folder' : 'Select Associated Folder'}
+                </button>
+                {bulk2AssociatedFiles.length > 0 && (
+                  <div className="bulk-folder-list bulk-file-list">
+                    {bulk2AssociatedFiles.map((file) => (
+                      <div className="bulk-folder-row" key={`${file.webkitRelativePath || file.name}-${file.size}`}>
+                        <div>
+                          <strong>{fileTitle(file)}</strong>
+                          <span>{file.webkitRelativePath || file.name}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="button-row">
+                  <button className="secondary-button" onClick={() => { setModal(null); resetBulk2(); }}>Done</button>
+                  <button
+                    className="primary-button"
+                    onClick={runBulkCreate2Associated}
+                    disabled={!bulk2AssociatedFiles.length || busy === 'bulk2-associated'}
+                  >
+                    {busy === 'bulk2-associated' ? 'Attaching...' : 'Attach Matching Files'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {bulk2Result?.phase === 'associated' && (
+              <div className="bulk-results">
+                <div className="bulk-results-header">
+                  <strong>{bulk2Result.matched || 0} file(s) attached</strong>
+                  {!!bulk2Result.unmatched?.length && <span className="bulk-errors">{bulk2Result.unmatched.length} unmatched</span>}
+                </div>
+                {!!bulk2Result.unmatched?.length && (
+                  <div className="bulk-result-list">
+                    {bulk2Result.unmatched.map((name) => (
+                      <div className="bulk-result-row error" key={name}>
+                        <XCircle size={15} />
+                        <strong>{name}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
