@@ -107,6 +107,7 @@
 }
 
 .document-fallback,
+.file-missing-state,
 .empty-viewer,
 .viewer-loading {
   display: grid;
@@ -114,6 +115,20 @@
   gap: 14px;
   text-align: center;
   padding: 30px;
+}
+
+.file-missing-state {
+  color: var(--muted);
+}
+.file-missing-state svg {
+  color: #b42318;
+}
+.file-missing-state strong {
+  color: var(--text);
+}
+.file-missing-state span {
+  max-width: 360px;
+  line-height: 1.5;
 }
 
 .viewer-stage-loading {

@@ -34,8 +34,10 @@
 
 /* Bulk modal */
 .bulk-modal {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
+  min-height: 0;
 }
 
 .bulk-intro {
@@ -54,6 +56,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .bulk-folder-header {

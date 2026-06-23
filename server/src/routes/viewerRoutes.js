@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'fs/promises';
 import path from 'path';
 import { QRCode } from '../models/QRCode.js';
 import { Upload } from '../models/Upload.js';
@@ -7,6 +8,8 @@ import { isPreviewableDocument } from '../utils/fileTypes.js';
 import { asyncRouter } from '../utils/asyncRouter.js';
 
 const router = asyncRouter(express.Router());
+
+const missingFileMessage = 'This file has been deleted, removed, or is no longer available.';
 
 async function resolveVault(token) {
   const qr = await QRCode.findOne({ token }).lean();
@@ -28,6 +31,29 @@ function mapUpload(upload, token, isCollectionPdf = false) {
     previewable: upload.category !== 'document' || isPreviewableDocument(upload.mimeType),
     isCollectionPdf
   };
+}
+
+async function fileExists(filePath) {
+  try {
+    const stat = await fs.stat(path.resolve(filePath));
+    return stat.isFile();
+  } catch (err) {
+    if (err.code === 'ENOENT') return false;
+    throw err;
+  }
+}
+
+function sendMissingFile(res) {
+  return res.status(404).json({
+    status: 'missing_file',
+    message: missingFileMessage
+  });
+}
+
+async function ensureFileExists(filePath, res) {
+  if (await fileExists(filePath)) return true;
+  sendMissingFile(res);
+  return false;
 }
 
 router.get('/:token', async (req, res) => {
@@ -78,9 +104,12 @@ router.get('/:token/files/:uploadId/view', async (req, res) => {
   if (!vault || vault.unavailable) return res.status(404).json({ message: 'QR content not found.' });
   const upload = vault.uploads.find((item) => String(item._id) === req.params.uploadId);
   if (!upload) return res.status(404).json({ message: 'File not found.' });
+  if (!(await ensureFileExists(upload.path, res))) return;
   res.setHeader('Content-Type', upload.mimeType);
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.sendFile(path.resolve(upload.path));
+  res.sendFile(path.resolve(upload.path), (err) => {
+    if (err && !res.headersSent) sendMissingFile(res);
+  });
 });
 
 router.get('/:token/files/:uploadId/download', async (req, res) => {
@@ -88,21 +117,30 @@ router.get('/:token/files/:uploadId/download', async (req, res) => {
   if (!vault || vault.unavailable) return res.status(404).json({ message: 'QR content not found.' });
   const upload = vault.uploads.find((item) => String(item._id) === req.params.uploadId);
   if (!upload) return res.status(404).json({ message: 'File not found.' });
-  res.download(path.resolve(upload.path), upload.originalName);
+  if (!(await ensureFileExists(upload.path, res))) return;
+  res.download(path.resolve(upload.path), upload.originalName, (err) => {
+    if (err && !res.headersSent) sendMissingFile(res);
+  });
 });
 
 router.get('/:token/collection-pdf/:collectionId/view', async (req, res) => {
   const col = await Collection.findById(req.params.collectionId).lean();
   if (!col || !col.defaultPdf) return res.status(404).json({ message: 'Collection PDF not found.' });
+  if (!(await ensureFileExists(col.defaultPdf.path, res))) return;
   res.setHeader('Content-Type', col.defaultPdf.mimeType);
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.sendFile(path.resolve(col.defaultPdf.path));
+  res.sendFile(path.resolve(col.defaultPdf.path), (err) => {
+    if (err && !res.headersSent) sendMissingFile(res);
+  });
 });
 
 router.get('/:token/collection-pdf/:collectionId/download', async (req, res) => {
   const col = await Collection.findById(req.params.collectionId).lean();
   if (!col || !col.defaultPdf) return res.status(404).json({ message: 'Collection PDF not found.' });
-  res.download(path.resolve(col.defaultPdf.path), col.defaultPdf.originalName);
+  if (!(await ensureFileExists(col.defaultPdf.path, res))) return;
+  res.download(path.resolve(col.defaultPdf.path), col.defaultPdf.originalName, (err) => {
+    if (err && !res.headersSent) sendMissingFile(res);
+  });
 });
 
 export default router;

@@ -13,6 +13,7 @@ export default function Viewer() {
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState('');
   const contentRef = useRef(null);
 
   useEffect(() => {
@@ -47,8 +48,32 @@ export default function Viewer() {
   const src = useMemo(() => (file ? fileUrl(file.viewUrl) : ''), [file]);
 
   useEffect(() => {
-    setFileLoading(Boolean(file && (file.category !== 'document' || file.previewable)));
-  }, [file?.id, file?.category, file?.previewable]);
+    let cancelled = false;
+    const canPreview = Boolean(file && (file.category !== 'document' || file.previewable));
+
+    setFileError('');
+    setFileLoading(canPreview);
+
+    if (!file || !canPreview) return () => {};
+
+    fetch(src, { method: 'HEAD' })
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.ok) {
+          setFileError('This file has been deleted, removed, or is no longer available.');
+          setFileLoading(false);
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFileError('This file could not be loaded right now.');
+        setFileLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [file?.id, file?.category, file?.previewable, src]);
 
   function fullscreen() {
     contentRef.current?.requestFullscreen?.();
@@ -94,6 +119,7 @@ export default function Viewer() {
           {vault.uploads.map((item, index) => (
             <button className={active === index ? 'active' : ''} key={item.id} onClick={() => {
               if (active !== index) setFileLoading(true);
+              setFileError('');
               setActive(index);
               setZoom(1);
             }}>
@@ -111,20 +137,27 @@ export default function Viewer() {
                   <span>{file.category} - {formatBytes(file.sizeBytes)}</span>
                 </div>
                 <div className="button-row-view">
-                  {(file.category === 'image' || file.category === 'pdf') && <button className="icon-button" onClick={() => setZoom(Math.max(0.5, zoom - 0.2))} title="Zoom out"><ZoomOut size={18} /></button>}
-                  {(file.category === 'image' || file.category === 'pdf') && <button className="icon-button" onClick={() => setZoom(Math.min(2.5, zoom + 0.2))} title="Zoom in"><ZoomIn size={18} /></button>}
+                  {!fileError && (file.category === 'image' || file.category === 'pdf') && <button className="icon-button" onClick={() => setZoom(Math.max(0.5, zoom - 0.2))} title="Zoom out"><ZoomOut size={18} /></button>}
+                  {!fileError && (file.category === 'image' || file.category === 'pdf') && <button className="icon-button" onClick={() => setZoom(Math.min(2.5, zoom + 0.2))} title="Zoom in"><ZoomIn size={18} /></button>}
                   <button className="icon-button" onClick={fullscreen} title="Fullscreen"><Maximize size={18} /></button>
-                  <a className="primary-button" href={fileUrl(file.downloadUrl)}><Download size={18} /> Download</a>
+                  {!fileError && <a className="primary-button" href={fileUrl(file.downloadUrl)}><Download size={18} /> Download</a>}
                 </div>
               </div>
               <div className="viewer-stage" ref={contentRef}>
                 {fileLoading && <div className="viewer-stage-loading"><span className="spinner" /> Loading file...</div>}
-                {file.category === 'image' && <img src={src} style={{ transform: `scale(${zoom})` }} alt={file.originalName} onLoad={() => setFileLoading(false)} onError={() => setFileLoading(false)} />}
-                {file.category === 'video' && <video src={src} controls playsInline onLoadedData={() => setFileLoading(false)} onError={() => setFileLoading(false)} />}
-                {file.category === 'audio' && <audio src={src} controls onLoadedMetadata={() => setFileLoading(false)} onError={() => setFileLoading(false)} />}
-                {file.category === 'pdf' && <iframe src={src} title={file.originalName} style={{ transform: `scale(${zoom})` }} onLoad={() => setFileLoading(false)} />}
-                {file.category === 'document' && file.previewable && <iframe src={src} title={file.originalName} onLoad={() => setFileLoading(false)} />}
-                {file.category === 'document' && !file.previewable && (
+                {fileError && (
+                  <div className="file-missing-state">
+                    <AlertTriangle size={34} />
+                    <strong>File Not Found</strong>
+                    <span>{fileError}</span>
+                  </div>
+                )}
+                {!fileError && file.category === 'image' && <img src={src} style={{ transform: `scale(${zoom})` }} alt={file.originalName} onLoad={() => setFileLoading(false)} onError={() => { setFileError('This image has been deleted, removed, or is no longer available.'); setFileLoading(false); }} />}
+                {!fileError && file.category === 'video' && <video src={src} controls playsInline onLoadedData={() => setFileLoading(false)} onError={() => { setFileError('This video has been deleted, removed, or is no longer available.'); setFileLoading(false); }} />}
+                {!fileError && file.category === 'audio' && <audio src={src} controls onLoadedMetadata={() => setFileLoading(false)} onError={() => { setFileError('This audio file has been deleted, removed, or is no longer available.'); setFileLoading(false); }} />}
+                {!fileError && file.category === 'pdf' && <iframe src={src} title={file.originalName} style={{ transform: `scale(${zoom})` }} onLoad={() => setFileLoading(false)} />}
+                {!fileError && file.category === 'document' && file.previewable && <iframe src={src} title={file.originalName} onLoad={() => setFileLoading(false)} />}
+                {!fileError && file.category === 'document' && !file.previewable && (
                   <div className="document-fallback">
                     <ExternalLink size={34} />
                     <strong>Preview is not available for this document type.</strong>
@@ -143,6 +176,7 @@ export default function Viewer() {
           {vault.uploads.map((item, index) => (
             <button className={active === index ? 'active' : ''} key={item.id} onClick={() => {
               if (active !== index) setFileLoading(true);
+              setFileError('');
               setActive(index);
               setZoom(1);
             }}>
