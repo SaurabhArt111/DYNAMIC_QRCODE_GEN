@@ -137,8 +137,14 @@ export default function Collections() {
               <Link className="primary-button" to={`/collections/${col._id}`}>Open</Link>
               <button className="icon-button" title="Edit" onClick={() => openEdit(col)}><Edit2 size={16} /></button>
               <button className="icon-button danger" title="Delete" onClick={() => deleteCollection(col)}><Trash2 size={16} /></button>
-              <button className="icon-button" title="Download QR Images" onClick={() => downloadCollectionZip(col)} disabled={busy === 'zip'}>
-                {busy === 'zip' ? 'Downloading...' : 'Download QR Images'}
+              <button
+                className="icon-button"
+                title="Download QR Images"
+                onClick={() => downloadCollectionZip(col)}
+                disabled={busy === 'zip'}
+              >
+                {busy === 'zip' ? <span className="spinner small-spinner" /> : <Download size={18} />}
+                <span>ZIP</span>
               </button>
             </div>
           </article>
