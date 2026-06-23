@@ -62,6 +62,8 @@ export default function Viewer() {
         if (!res.ok) {
           setFileError('This file has been deleted, removed, or is no longer available.');
           setFileLoading(false);
+        } else if (file.category === 'pdf' || file.category === 'document') {
+          setFileLoading(false);
         }
       })
       .catch(() => {
@@ -155,7 +157,15 @@ export default function Viewer() {
                 {!fileError && file.category === 'image' && <img src={src} style={{ transform: `scale(${zoom})` }} alt={file.originalName} onLoad={() => setFileLoading(false)} onError={() => { setFileError('This image has been deleted, removed, or is no longer available.'); setFileLoading(false); }} />}
                 {!fileError && file.category === 'video' && <video src={src} controls playsInline onLoadedData={() => setFileLoading(false)} onError={() => { setFileError('This video has been deleted, removed, or is no longer available.'); setFileLoading(false); }} />}
                 {!fileError && file.category === 'audio' && <audio src={src} controls onLoadedMetadata={() => setFileLoading(false)} onError={() => { setFileError('This audio file has been deleted, removed, or is no longer available.'); setFileLoading(false); }} />}
-                {!fileError && file.category === 'pdf' && <iframe src={src} title={file.originalName} style={{ transform: `scale(${zoom})` }} onLoad={() => setFileLoading(false)} />}
+                {!fileError && file.category === 'pdf' && (
+                  <object className="pdf-viewer-frame" data={src} type="application/pdf" style={{ transform: `scale(${zoom})` }} onLoad={() => setFileLoading(false)}>
+                    <div className="document-fallback">
+                      <ExternalLink size={34} />
+                      <strong>PDF preview is not available on this device.</strong>
+                      <a className="primary-button" href={src} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Open PDF</a>
+                    </div>
+                  </object>
+                )}
                 {!fileError && file.category === 'document' && file.previewable && <iframe src={src} title={file.originalName} onLoad={() => setFileLoading(false)} />}
                 {!fileError && file.category === 'document' && !file.previewable && (
                   <div className="document-fallback">
@@ -180,8 +190,8 @@ export default function Viewer() {
               setFileError('');
               setActive(index);
               setZoom(1);
-              }}>
-              {/* File {index + 1} */}
+            }} aria-label={`Show file ${index + 1}`}>
+              <span className="mobile-file-dot" />
             </button>
           ))}
         </nav>

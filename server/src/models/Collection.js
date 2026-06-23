@@ -4,6 +4,8 @@ const collectionSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
+    status: { type: String, enum: ['active', 'deleted'], default: 'active', index: true },
+    deletedAt: Date,
     defaultPdf: {
       originalName: String,
       storedName: String,

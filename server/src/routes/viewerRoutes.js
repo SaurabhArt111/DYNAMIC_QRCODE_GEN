@@ -15,7 +15,7 @@ async function resolveVault(token) {
   const qr = await QRCode.findOne({ token }).lean();
   if (!qr) return null;
   if (qr.status !== 'active') return { qr, uploads: [], unavailable: qr.status };
-  const uploads = await Upload.find({ qrCode: qr._id }).sort({ order: 1 }).lean();
+  const uploads = await Upload.find({ qrCode: qr._id, status: { $ne: 'deleted' } }).sort({ order: 1 }).lean();
   return { qr, uploads, unavailable: null };
 }
 
@@ -71,7 +71,7 @@ router.get('/:token', async (req, res) => {
   let allUploads = vault.uploads.map((u) => mapUpload(u, req.params.token, false));
 
   if (vault.qr.collection) {
-    const col = await Collection.findById(vault.qr.collection).lean();
+    const col = await Collection.findOne({ _id: vault.qr.collection, status: { $ne: 'deleted' } }).lean();
     if (col && col.defaultPdf) {
       allUploads.push({
         id: `col-pdf-${col._id}`,
@@ -124,7 +124,7 @@ router.get('/:token/files/:uploadId/download', async (req, res) => {
 });
 
 router.get('/:token/collection-pdf/:collectionId/view', async (req, res) => {
-  const col = await Collection.findById(req.params.collectionId).lean();
+  const col = await Collection.findOne({ _id: req.params.collectionId, status: { $ne: 'deleted' } }).lean();
   if (!col || !col.defaultPdf) return res.status(404).json({ message: 'Collection PDF not found.' });
   if (!(await ensureFileExists(col.defaultPdf.path, res))) return;
   res.setHeader('Content-Type', col.defaultPdf.mimeType);
@@ -135,7 +135,7 @@ router.get('/:token/collection-pdf/:collectionId/view', async (req, res) => {
 });
 
 router.get('/:token/collection-pdf/:collectionId/download', async (req, res) => {
-  const col = await Collection.findById(req.params.collectionId).lean();
+  const col = await Collection.findOne({ _id: req.params.collectionId, status: { $ne: 'deleted' } }).lean();
   if (!col || !col.defaultPdf) return res.status(404).json({ message: 'Collection PDF not found.' });
   if (!(await ensureFileExists(col.defaultPdf.path, res))) return;
   res.download(path.resolve(col.defaultPdf.path), col.defaultPdf.originalName, (err) => {

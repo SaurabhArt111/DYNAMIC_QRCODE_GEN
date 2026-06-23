@@ -34,7 +34,7 @@ async function createUniqueToken() {
 
 async function recalculateSize(qrId) {
   const result = await Upload.aggregate([
-    { $match: { qrCode: qrId } },
+    { $match: { qrCode: qrId, status: { $ne: 'deleted' } } },
     { $group: { _id: '$qrCode', bytes: { $sum: '$sizeBytes' } } }
   ]);
   await QRCode.findByIdAndUpdate(qrId, { sizeBytes: result[0]?.bytes || 0 });
@@ -48,7 +48,7 @@ async function moveQrToRecycle(qrId, adminId) {
   await qr.save();
   await RecycleBin.updateOne(
     { qrCode: qr._id },
-    { qrCode: qr._id, deletedBy: adminId, deletedAt: qr.deletedAt, snapshot: qr.toObject() },
+    { itemType: 'qr', qrCode: qr._id, deletedBy: adminId, deletedAt: qr.deletedAt, snapshot: qr.toObject() },
     { upsert: true }
   );
   await logActivity('QR_DELETED', qr._id, `QR moved to recycle bin: ${qr.name}`);
@@ -98,6 +98,10 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   const { name, description, collectionId } = req.body;
   if (!name) return res.status(400).json({ message: 'QR name is required.' });
+  if (collectionId) {
+    const collection = await Collection.findOne({ _id: collectionId, status: { $ne: 'deleted' } }).lean();
+    if (!collection) return res.status(404).json({ message: 'Collection not found.' });
+  }
 
   const qr = await QRCode.create({
     name,
@@ -116,6 +120,13 @@ router.post('/bulk-folder', requireAuth, qrUpload.any(), handleUploadErrors, asy
   const files = req.files || [];
 
   if (!files.length) return res.status(400).json({ message: 'No files uploaded.' });
+  if (collectionId) {
+    const collection = await Collection.findOne({ _id: collectionId, status: { $ne: 'deleted' } }).lean();
+    if (!collection) {
+      await Promise.all(files.map((file) => removeUploadFile(file.path).catch(() => {})));
+      return res.status(404).json({ message: 'Collection not found.' });
+    }
+  }
 
   // Group files by their folder (fieldname is used as folder name)
   const folders = {};
@@ -163,11 +174,11 @@ router.post('/bulk-folder', requireAuth, qrUpload.any(), handleUploadErrors, asy
 router.get('/:id', requireAuth, async (req, res) => {
   const qr = await QRCode.findById(req.params.id).lean();
   if (!qr || qr.status === 'deleted') return res.status(404).json({ message: 'QR not found.' });
-  const uploads = await Upload.find({ qrCode: qr._id }).sort({ order: 1 }).lean();
+  const uploads = await Upload.find({ qrCode: qr._id, status: { $ne: 'deleted' } }).sort({ order: 1 }).lean();
 
   let collectionPdf = null;
   if (qr.collection) {
-    const col = await Collection.findById(qr.collection).lean();
+    const col = await Collection.findOne({ _id: qr.collection, status: { $ne: 'deleted' } }).lean();
     if (col && col.defaultPdf) {
       collectionPdf = {
         collectionId: col._id,
@@ -197,7 +208,7 @@ router.post('/:id/files', requireAuth, qrUpload.array('files', 4), handleUploadE
   const qr = await QRCode.findById(req.params.id);
   if (!qr || qr.status === 'deleted') return res.status(404).json({ message: 'QR not found.' });
 
-  const existing = await Upload.countDocuments({ qrCode: qr._id });
+  const existing = await Upload.countDocuments({ qrCode: qr._id, status: { $ne: 'deleted' } });
   if (existing + req.files.length > 4) {
     await Promise.all(req.files.map((file) => removeUploadFile(file.path)));
     return res.status(400).json({ message: 'Each QR can contain a maximum of 4 files.' });
@@ -225,7 +236,7 @@ router.put('/:id/files/reorder', requireAuth, async (req, res) => {
   if (!qr || qr.status === 'deleted') return res.status(404).json({ message: 'QR not found.' });
 
   const orderedIds = Array.isArray(req.body.uploadIds) ? req.body.uploadIds : [];
-  const uploads = await Upload.find({ qrCode: qr._id });
+  const uploads = await Upload.find({ qrCode: qr._id, status: { $ne: 'deleted' } });
   const uploadIds = uploads.map((upload) => String(upload._id));
   const hasSameUploads = orderedIds.length === uploadIds.length && uploadIds.every((id) => orderedIds.includes(id));
 
@@ -236,12 +247,12 @@ router.put('/:id/files/reorder', requireAuth, async (req, res) => {
   await Promise.all(
     orderedIds.map((uploadId, index) => Upload.updateOne({ _id: uploadId, qrCode: qr._id }, { order: index }))
   );
-  const reordered = await Upload.find({ qrCode: qr._id }).sort({ order: 1 }).lean();
+  const reordered = await Upload.find({ qrCode: qr._id, status: { $ne: 'deleted' } }).sort({ order: 1 }).lean();
   res.json({ uploads: reordered });
 });
 
 router.put('/:id/files/:uploadId/replace', requireAuth, qrUpload.single('file'), handleUploadErrors, async (req, res) => {
-  const upload = await Upload.findOne({ _id: req.params.uploadId, qrCode: req.params.id });
+  const upload = await Upload.findOne({ _id: req.params.uploadId, qrCode: req.params.id, status: { $ne: 'deleted' } });
   if (!upload) return res.status(404).json({ message: 'Upload not found.' });
   await removeUploadFile(upload.path);
   upload.originalName = req.file.originalname;
@@ -256,11 +267,19 @@ router.put('/:id/files/:uploadId/replace', requireAuth, qrUpload.single('file'),
 });
 
 router.delete('/:id/files/:uploadId', requireAuth, async (req, res) => {
-  const upload = await Upload.findOneAndDelete({ _id: req.params.uploadId, qrCode: req.params.id });
+  const upload = await Upload.findOne({ _id: req.params.uploadId, qrCode: req.params.id, status: { $ne: 'deleted' } });
   if (!upload) return res.status(404).json({ message: 'Upload not found.' });
-  await removeUploadFile(upload.path);
+  upload.status = 'deleted';
+  upload.deletedAt = new Date();
+  await upload.save();
+  await RecycleBin.updateOne(
+    { upload: upload._id },
+    { itemType: 'upload', qrCode: upload._id, upload: upload._id, deletedBy: req.admin._id, deletedAt: upload.deletedAt, snapshot: upload.toObject() },
+    { upsert: true }
+  );
   await recalculateSize(upload.qrCode);
-  res.json({ message: 'File removed.' });
+  await logActivity('FILE_DELETED', upload.qrCode, `File moved to recycle bin: ${upload.originalName}`);
+  res.json({ message: 'File moved to recycle bin.' });
 });
 
 router.get('/:id/qr-image', requireAuth, async (req, res) => {

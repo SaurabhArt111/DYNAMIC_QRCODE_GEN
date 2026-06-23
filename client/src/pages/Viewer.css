@@ -89,7 +89,8 @@
 
 .viewer-stage img,
 .viewer-stage video,
-.viewer-stage iframe {
+.viewer-stage iframe,
+.viewer-stage object {
   max-width: 100%;
   max-height: 76vh;
   transform-origin: center center;
@@ -97,9 +98,15 @@
   background: #fff;
 }
 
-.viewer-stage iframe {
+.viewer-stage iframe,
+.viewer-stage object {
   width: min(100%, 980px);
   height: 76vh;
+}
+
+.pdf-viewer-frame {
+  display: block;
+  min-height: 520px;
 }
 
 .viewer-stage audio {
@@ -120,15 +127,12 @@
 .file-missing-state {
   color: var(--muted);
 }
-
 .file-missing-state svg {
   color: #b42318;
 }
-
 .file-missing-state strong {
   color: var(--text);
 }
-
 .file-missing-state span {
   max-width: 360px;
   line-height: 1.5;
@@ -170,7 +174,15 @@
   }
 
   .viewer-stage {
-    min-height: 55vh;
+    min-height: 55dvh;
+    padding: 10px;
+  }
+
+  .viewer-stage iframe,
+  .viewer-stage object {
+    height: 62dvh;
+    min-height: 420px;
+    transform-origin: top center;
   }
 
   .mobile-file-nav {
@@ -179,19 +191,40 @@
     right: 0;
     bottom: 0;
     z-index: 20;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 10px;
     background: rgba(255, 255, 255, 0.96);
     border-top: 1px solid var(--border);
   }
 
   .mobile-file-nav button {
-    text-align: center;
-    padding: 10px 4px;
-    border-radius: 50%;
-    font-weight: 800;
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .mobile-file-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #9ca3af;
+    transition: transform 0.18s ease, background 0.18s ease, width 0.18s ease;
+  }
+
+  .mobile-file-nav button.active {
+    background: transparent;
+  }
+
+  .mobile-file-nav button.active .mobile-file-dot {
+    width: 22px;
+    background: var(--primary);
   }
 }
 
@@ -200,7 +233,6 @@
   justify-content: space-around;
   gap: 8px;
 }
-
 .viewer-status-page {
   min-height: 100vh;
   display: grid;

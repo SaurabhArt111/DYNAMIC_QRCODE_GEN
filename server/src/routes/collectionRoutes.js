@@ -1,10 +1,14 @@
 import express from 'express';
 import path from 'path';
 import multer from 'multer';
+import QRCodeImage from 'qrcode';
 import { requireAuth } from '../middleware/auth.js';
 import { Collection } from '../models/Collection.js';
 import { QRCode } from '../models/QRCode.js';
+import { RecycleBin } from '../models/RecycleBin.js';
 import { uploadRoot, removeUploadFile } from '../utils/storage.js';
+import { logActivity } from '../utils/activity.js';
+import { env } from '../config/env.js';
 import { asyncRouter } from '../utils/asyncRouter.js';
 
 const pdfUpload = multer({
@@ -27,10 +31,98 @@ function handlePdfError(err, req, res, next) {
   res.status(400).json({ message: err.message || 'File upload error.' });
 }
 
+function vaultUrl(token) {
+  return `${env.publicBaseUrl}/vault/${token}`;
+}
+
+function safeFileName(value, fallback = 'file') {
+  return String(value || fallback).replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || fallback;
+}
+
+function crc32(buffer) {
+  let crc = -1;
+  for (const byte of buffer) {
+    crc ^= byte;
+    for (let i = 0; i < 8; i += 1) {
+      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+    }
+  }
+  return (crc ^ -1) >>> 0;
+}
+
+function zipDateParts(date = new Date()) {
+  const year = Math.max(date.getFullYear(), 1980);
+  const dosTime = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+  const dosDate = ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+  return { dosTime, dosDate };
+}
+
+function buildZip(files) {
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  for (const file of files) {
+    const name = Buffer.from(file.name);
+    const data = file.data;
+    const checksum = crc32(data);
+    const { dosTime, dosDate } = zipDateParts(file.date);
+
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0, 6);
+    local.writeUInt16LE(0, 8);
+    local.writeUInt16LE(dosTime, 10);
+    local.writeUInt16LE(dosDate, 12);
+    local.writeUInt32LE(checksum, 14);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(name.length, 26);
+    local.writeUInt16LE(0, 28);
+    localParts.push(local, name, data);
+
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0, 8);
+    central.writeUInt16LE(0, 10);
+    central.writeUInt16LE(dosTime, 12);
+    central.writeUInt16LE(dosDate, 14);
+    central.writeUInt32LE(checksum, 16);
+    central.writeUInt32LE(data.length, 20);
+    central.writeUInt32LE(data.length, 24);
+    central.writeUInt16LE(name.length, 28);
+    central.writeUInt16LE(0, 30);
+    central.writeUInt16LE(0, 32);
+    central.writeUInt16LE(0, 34);
+    central.writeUInt16LE(0, 36);
+    central.writeUInt32LE(0, 38);
+    central.writeUInt32LE(offset, 42);
+    centralParts.push(central, name);
+
+    offset += local.length + name.length + data.length;
+  }
+
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(0, 4);
+  end.writeUInt16LE(0, 6);
+  end.writeUInt16LE(files.length, 8);
+  end.writeUInt16LE(files.length, 10);
+  end.writeUInt32LE(centralSize, 12);
+  end.writeUInt32LE(offset, 16);
+  end.writeUInt16LE(0, 20);
+
+  return Buffer.concat([...localParts, ...centralParts, end]);
+}
+
 const router = asyncRouter(express.Router());
 
 router.get('/', requireAuth, async (req, res) => {
-  const items = await Collection.find().sort({ createdAt: -1 }).lean();
+  const items = await Collection.find({ status: { $ne: 'deleted' } }).sort({ createdAt: -1 }).lean();
   res.json({ items });
 });
 
@@ -56,7 +148,7 @@ router.post('/', requireAuth, pdfUpload.single('defaultPdf'), handlePdfError, as
 
 router.put('/:id', requireAuth, pdfUpload.single('defaultPdf'), handlePdfError, async (req, res) => {
   const col = await Collection.findById(req.params.id);
-  if (!col) return res.status(404).json({ message: 'Collection not found.' });
+  if (!col || col.status === 'deleted') return res.status(404).json({ message: 'Collection not found.' });
 
   col.name = req.body.name || col.name;
   col.description = req.body.description ?? col.description;
@@ -86,21 +178,24 @@ router.put('/:id', requireAuth, pdfUpload.single('defaultPdf'), handlePdfError, 
 
 router.delete('/:id', requireAuth, async (req, res) => {
   const col = await Collection.findById(req.params.id);
-  if (!col) return res.status(404).json({ message: 'Collection not found.' });
+  if (!col || col.status === 'deleted') return res.status(404).json({ message: 'Collection not found.' });
 
-  // Unlink QR codes from this collection (don't delete them)
-  await QRCode.updateMany({ collection: col._id }, { $set: { collection: null } });
+  col.status = 'deleted';
+  col.deletedAt = new Date();
+  await col.save();
 
-  if (col.defaultPdf?.path) {
-    await removeUploadFile(col.defaultPdf.path).catch(() => {});
-  }
-  await Collection.deleteOne({ _id: col._id });
-  res.json({ message: 'Collection deleted.' });
+  await RecycleBin.updateOne(
+    { collection: col._id },
+    { itemType: 'collection', qrCode: col._id, collection: col._id, deletedBy: req.admin._id, deletedAt: col.deletedAt, snapshot: col.toObject() },
+    { upsert: true }
+  );
+  await logActivity('COLLECTION_DELETED', col._id, `Collection moved to recycle bin: ${col.name}`);
+  res.json({ message: 'Collection moved to recycle bin.' });
 });
 
 router.get('/:id/qrcodes', requireAuth, async (req, res) => {
   const col = await Collection.findById(req.params.id).lean();
-  if (!col) return res.status(404).json({ message: 'Collection not found.' });
+  if (!col || col.status === 'deleted') return res.status(404).json({ message: 'Collection not found.' });
 
   const page = Math.max(Number(req.query.page || 1), 1);
   const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
@@ -117,6 +212,31 @@ router.get('/:id/qrcodes', requireAuth, async (req, res) => {
   ]);
 
   res.json({ items, total, page, pages: Math.ceil(total / limit), collection: col });
+});
+
+router.get('/:id/qr-images.zip', requireAuth, async (req, res) => {
+  const col = await Collection.findById(req.params.id).lean();
+  if (!col || col.status === 'deleted') return res.status(404).json({ message: 'Collection not found.' });
+
+  const qrs = await QRCode.find({ collection: col._id, status: { $ne: 'deleted' } }).sort({ name: 1, createdAt: 1 }).lean();
+  if (!qrs.length) return res.status(404).json({ message: 'No QR codes found in this collection.' });
+
+  const usedNames = new Map();
+  const files = await Promise.all(qrs.map(async (qr) => {
+    const base = safeFileName(qr.name, 'qr-code');
+    const count = usedNames.get(base) || 0;
+    usedNames.set(base, count + 1);
+    const name = `${base}${count ? `-${count + 1}` : ''}.png`;
+    const data = await QRCodeImage.toBuffer(vaultUrl(qr.token), { width: 1200, margin: 2 });
+    return { name, data, date: qr.updatedAt || qr.createdAt };
+  }));
+
+  const zip = buildZip(files);
+  const zipName = `${safeFileName(col.name, 'collection')}-qr-images.zip`;
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
+  res.setHeader('Content-Length', zip.length);
+  res.send(zip);
 });
 
 export default router;

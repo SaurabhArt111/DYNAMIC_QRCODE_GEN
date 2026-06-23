@@ -78,6 +78,24 @@ export default function CollectionDetail() {
     } finally { setBusy(''); }
   }
 
+  async function downloadCollectionZip() {
+    setBusy('zip');
+    setError('');
+    try {
+      const res = await api.get(`/collections/${id}/qr-images.zip`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${col?.name || 'collection'}-qr-images.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to download QR images.');
+    } finally {
+      setBusy('');
+    }
+  }
+
   // ---- Bulk folder logic ----
   function onFolderInput(e) {
     const files = Array.from(e.target.files || []);
@@ -171,6 +189,9 @@ export default function CollectionDetail() {
           )}
         </div>
         <div className="button-row">
+          <button className="secondary-button" onClick={downloadCollectionZip} disabled={busy === 'zip' || loading || !qrItems.length}>
+            {busy === 'zip' ? <span className="spinner small-spinner" /> : <Download size={18} />} ZIP
+          </button>
           <button className="secondary-button" onClick={() => { setModal('bulk'); setBulkResults(null); setBulkFolders([]); setBulkParentName(''); setBulkSkippedFiles(0); }}>
             <FolderUp size={18} /> Bulk Create
           </button>
@@ -181,6 +202,7 @@ export default function CollectionDetail() {
       </div>
 
       <div className="qr-toolbar">
+        {error && <div className="error-box">{error}</div>}
         <div className="search-box">
           <Search size={18} />
           <input placeholder="Search QR codes" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load()} />

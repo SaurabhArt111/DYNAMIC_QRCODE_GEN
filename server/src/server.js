@@ -18,12 +18,29 @@ const app = express();
 const nodeEnv = process.env.NODE_ENV || 'development';
 const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 const isBehindProxy = nodeEnv === 'production' || process.env.RENDER === 'true' || Boolean(process.env.RENDER_EXTERNAL_URL);
+const frameAncestors = ["'self'", clientUrl, env.clientUrl, env.publicBaseUrl]
+  .filter(Boolean)
+  .map((url) => {
+    try {
+      return new URL(url).origin;
+    } catch {
+      return url;
+    }
+  })
+  .filter((url, index, list) => list.indexOf(url) === index);
 
 if (isBehindProxy) {
   app.set('trust proxy', 1);
 }
 
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      frameAncestors
+    }
+  }
+}));
 app.use(compression());
 app.use(cors({ origin: `${nodeEnv === 'development' ? 'http://localhost:5173' : (clientUrl || 'http://localhost:5173')}`, credentials: true }));
 app.use(express.json({ limit: '1mb' }));

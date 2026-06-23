@@ -9,7 +9,9 @@ const uploadSchema = new mongoose.Schema(
     sizeBytes: { type: Number, required: true },
     category: { type: String, enum: ['image', 'video', 'pdf', 'audio', 'document'], required: true },
     path: { type: String, required: true },
-    order: { type: Number, default: 0 }
+    order: { type: Number, default: 0 },
+    status: { type: String, enum: ['active', 'deleted'], default: 'active', index: true },
+    deletedAt: Date
   },
   { timestamps: true, collection: 'uploads' }
 );
