@@ -26,55 +26,44 @@ const features = [
 export default function Landing() {
   return (
     <main className="landing-page">
-      {/* Signature gradient bar */}
-      <div className="landing-gradient-bar"></div>
-
       <section className="landing-hero">
         <header className="landing-topbar">
           <div className="landing-brand">
-            <QrCode size={24} strokeWidth={1.5} />
+            <QrCode size={24} />
             <span>{appName}</span>
           </div>
           <nav className="landing-nav">
-            <Link className="landing-link" to={routes.dashboard}>
-              <span>Control Center</span>
-              <ArrowRight size={18} strokeWidth={1.5} />
+            <Link className="landing-nav-link" to={routes.dashboard}>
+              Open Control Center
+              <ArrowRight size={18} />
             </Link>
           </nav>
         </header>
 
-        {/* Hero copy section */}
         <div className="landing-copy">
           <p className="landing-kicker">Dynamic QR management platform</p>
-          <h1 className="landing-headline">{appName}</h1>
+          <h1>{appName}</h1>
           <p className="landing-summary">
             A clean public front door for visitors, with the full QR operations workspace tucked behind a secure admin control path.
           </p>
         </div>
 
-        {/* Features grid */}
-        <div className="landing-features">
-          <div className="landing-features-header">
-            <h2>Core capabilities</h2>
-            <div className="landing-features-divider"></div>
-          </div>
-
-          <div className="landing-features-grid">
-            {features.map(({ title, text, icon: Icon }, idx) => (
-              <article className="landing-feature" key={title} style={{ '--feature-index': idx }}>
-                <div className="landing-feature-icon">
-                  <Icon size={20} strokeWidth={1.5} />
-                </div>
-                <strong>{title}</strong>
-                <p>{text}</p>
-              </article>
-            ))}
-          </div>
+        <div className="landing-overview">
+          {features.map(({ title, text, icon: Icon }, index) => (
+            <article 
+              className="landing-feature" 
+              key={title}
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
+              <div className="landing-feature-icon">
+                <Icon size={20} />
+              </div>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </article>
+          ))}
         </div>
       </section>
-
-      {/* Bottom accent bar */}
-      <div className="landing-footer-accent"></div>
     </main>
   );
 }
