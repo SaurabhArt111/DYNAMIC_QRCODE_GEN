@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { BarChart3, FolderOpen, LogOut, QrCode, Recycle, Settings } from 'lucide-react';
 import { useAuth } from './context/AuthContext.jsx';
+import { routes } from './routes/paths.js';
 import './App.css';
 
 const appName = import.meta.env.VITE_APP_NAME || 'DynamicVault QR';
@@ -11,7 +12,7 @@ export default function App() {
 
   function handleLogout() {
     logout();
-    navigate('/login');
+    navigate(routes.login);
   }
 
   return (
@@ -22,11 +23,11 @@ export default function App() {
           <span>{appName}</span>
         </div>
         <nav className="nav-links desktop-nav">
-          <NavLink to="/"><BarChart3 size={18} /><span>Dashboard</span></NavLink>
-          <NavLink to="/collections"><FolderOpen size={18} /><span>Collections</span></NavLink>
-          <NavLink to="/qrcodes"><QrCode size={18} /><span>QR Codes</span></NavLink>
-          <NavLink to="/recycle-bin"><Recycle size={18} /><span>Recycle Bin</span></NavLink>
-          <NavLink to="/settings"><Settings size={18} /><span>Settings</span></NavLink>
+          <NavLink to={routes.dashboard} end><BarChart3 size={18} /><span>Dashboard</span></NavLink>
+          <NavLink to={routes.collections}><FolderOpen size={18} /><span>Collections</span></NavLink>
+          <NavLink to={routes.qrcodes}><QrCode size={18} /><span>QR Codes</span></NavLink>
+          <NavLink to={routes.recycleBin}><Recycle size={18} /><span>Recycle Bin</span></NavLink>
+          <NavLink to={routes.settings}><Settings size={18} /><span>Settings</span></NavLink>
         </nav>
         <button className="logout-button" onClick={handleLogout}><LogOut size={18} /> Logout</button>
       </aside>
@@ -34,11 +35,11 @@ export default function App() {
         <Outlet />
       </main>
       <div className="mobile-bottom-nav">
-        <NavLink to="/"><BarChart3 size={20} /><span>Home</span></NavLink>
-        <NavLink to="/collections"><FolderOpen size={20} /><span>Collections</span></NavLink>
-        <NavLink to="/qrcodes"><QrCode size={20} /><span>QR</span></NavLink>
-        <NavLink to="/recycle-bin"><Recycle size={20} /><span>Bin</span></NavLink>
-        <NavLink to="/settings"><Settings size={20} /><span>Settings</span></NavLink>
+        <NavLink to={routes.dashboard} end><BarChart3 size={20} /><span>Home</span></NavLink>
+        <NavLink to={routes.collections}><FolderOpen size={20} /><span>Collections</span></NavLink>
+        <NavLink to={routes.qrcodes}><QrCode size={20} /><span>QR</span></NavLink>
+        <NavLink to={routes.recycleBin}><Recycle size={20} /><span>Bin</span></NavLink>
+        <NavLink to={routes.settings}><Settings size={20} /><span>Settings</span></NavLink>
       </div>
     </div>
   );

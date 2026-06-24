@@ -12,6 +12,7 @@ import qrRoutes from './routes/qrRoutes.js';
 import recycleRoutes from './routes/recycleRoutes.js';
 import viewerRoutes from './routes/viewerRoutes.js';
 import collectionRoutes from './routes/collectionRoutes.js';
+import settingsRoutes from './routes/settingsRoutes.js';
 import { errorHandler, notFound } from './middleware/notFound.js';
 
 const app = express();
@@ -60,6 +61,7 @@ app.use('/api/qrcodes', qrRoutes);
 app.use('/api/recycle-bin', recycleRoutes);
 app.use('/api/vault', viewerRoutes);
 app.use('/api/collections', collectionRoutes);
+app.use('/api/settings', settingsRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

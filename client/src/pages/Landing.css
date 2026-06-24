@@ -1,0 +1,127 @@
+.landing-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(194, 65, 12, 0.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(74, 20, 27, 0.16), transparent 34%),
+    linear-gradient(180deg, #f5efe7 0%, #f6f7f4 45%, #ffffff 100%);
+  color: var(--text);
+}
+
+.landing-hero {
+  width: min(1200px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 48px;
+  display: grid;
+  gap: 36px;
+}
+
+.landing-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--primary);
+  font-weight: 900;
+  font-size: 1rem;
+}
+
+.landing-actions,
+.landing-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.landing-copy {
+  display: grid;
+  gap: 18px;
+  padding: 72px 0 24px;
+}
+
+.landing-kicker {
+  margin: 0;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.landing-copy h1 {
+  margin: 0;
+  max-width: 12ch;
+  font-size: clamp(2.8rem, 8vw, 5.8rem);
+  line-height: 0.95;
+}
+
+.landing-summary {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.landing-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.landing-feature {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(74, 20, 27, 0.12);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 16px 38px rgba(23, 32, 42, 0.08);
+}
+
+.landing-feature svg {
+  color: var(--primary);
+}
+
+.landing-feature strong {
+  font-size: 1rem;
+}
+
+.landing-feature p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .landing-topbar,
+  .landing-overview {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .landing-topbar {
+    align-items: flex-start;
+  }
+
+  .landing-actions {
+    width: 100%;
+  }
+
+  .landing-actions a,
+  .landing-cta-row a {
+    flex: 1 1 200px;
+  }
+
+  .landing-copy {
+    padding-top: 24px;
+  }
+}

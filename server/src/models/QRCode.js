@@ -8,6 +8,7 @@ const qrCodeSchema = new mongoose.Schema(
     status: { type: String, enum: ['active', 'inactive', 'deleted'], default: 'active', index: true },
     sizeBytes: { type: Number, default: 0 },
     deletedAt: Date,
+    deletedByCollection: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection', default: null, index: true },
     collection: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection', default: null }
   },
   { timestamps: true, collection: 'qrcodes', suppressReservedKeysWarning: true }

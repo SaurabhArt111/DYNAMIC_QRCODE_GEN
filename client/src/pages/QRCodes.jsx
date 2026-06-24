@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Download, Plus, Search, Trash } from 'lucide-react';
 import { api } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
+import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './QRCodes.css';
 
@@ -115,7 +116,7 @@ export default function QRCodes() {
               <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
             </dl>
             <div className="button-row">
-              <Link className="primary-button" to={`/qrcodes/${qr._id}`}>Manage</Link>
+              <Link className="primary-button" to={routes.qrcode(qr._id)}>Manage</Link>
               <button className="icon-button" title="Download QR" onClick={() => downloadQr(qr)} disabled={busyAction === `download-${qr._id}`}>
                 {busyAction === `download-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
               </button>

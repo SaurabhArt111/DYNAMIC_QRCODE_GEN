@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { Lock, LogIn, QrCode } from 'lucide-react';
 import { api } from '../api/http.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { routes } from '../routes/paths.js';
 import './Login.css';
 
 const appName = import.meta.env.VITE_APP_NAME || 'DynamicVault QR';
@@ -21,7 +22,7 @@ export default function Login() {
 
   // Already logged in
   if (token) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={routes.dashboard} replace />;
   }
 
   async function submit(event) {
@@ -35,7 +36,7 @@ export default function Login() {
 
       login(data);
 
-      navigate('/', { replace: true });
+      navigate(routes.dashboard, { replace: true });
     } catch (err) {
       setError(
         err.response?.data?.message ||

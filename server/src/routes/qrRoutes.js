@@ -13,6 +13,7 @@ import { logActivity } from '../utils/activity.js';
 import { removeUploadFile } from '../utils/storage.js';
 import { env } from '../config/env.js';
 import { asyncRouter } from '../utils/asyncRouter.js';
+import { buildUploadDoc, moveQrToRecycle, recalculateQrSize } from '../services/qrLifecycle.js';
 
 const router = asyncRouter(express.Router());
 
@@ -21,7 +22,7 @@ function vaultUrl(token) {
 }
 
 function mapQr(qr) {
-  return { ...qr, vaultUrl: vaultUrl(qr.token) };
+  return { ...qr, collectionId: qr.collection || null, vaultUrl: vaultUrl(qr.token) };
 }
 
 function filenameTitle(fileName) {
@@ -40,29 +41,6 @@ async function createUniqueToken() {
     if (!exists) return token;
   }
   throw new Error('Unable to generate unique QR token.');
-}
-
-async function recalculateSize(qrId) {
-  const result = await Upload.aggregate([
-    { $match: { qrCode: qrId, status: { $ne: 'deleted' } } },
-    { $group: { _id: '$qrCode', bytes: { $sum: '$sizeBytes' } } }
-  ]);
-  await QRCode.findByIdAndUpdate(qrId, { sizeBytes: result[0]?.bytes || 0 });
-}
-
-async function moveQrToRecycle(qrId, adminId) {
-  const qr = await QRCode.findById(qrId);
-  if (!qr || qr.status === 'deleted') return null;
-  qr.status = 'deleted';
-  qr.deletedAt = new Date();
-  await qr.save();
-  await RecycleBin.updateOne(
-    { qrCode: qr._id },
-    { itemType: 'qr', qrCode: qr._id, deletedBy: adminId, deletedAt: qr.deletedAt, snapshot: qr.toObject() },
-    { upsert: true }
-  );
-  await logActivity('QR_DELETED', qr._id, `QR moved to recycle bin: ${qr.name}`);
-  return qr;
 }
 
 router.get('/', requireAuth, async (req, res) => {
@@ -159,18 +137,11 @@ router.post('/bulk-folder', requireAuth, qrUpload.any(), handleUploadErrors, asy
       });
 
       const uploadDocs = folderFiles.map((file, index) => ({
-        qrCode: qr._id,
-        originalName: file.originalname,
-        storedName: file.filename,
-        mimeType: file.mimetype,
-        sizeBytes: file.size,
-        category: getFileCategory(file.mimetype),
-        path: file.path,
-        order: index
+        ...buildUploadDoc(file, qr._id, index)
       }));
 
       await Upload.insertMany(uploadDocs);
-      await recalculateSize(qr._id);
+      await recalculateQrSize(qr._id);
       await logActivity('QR_CREATED', qr._id, `QR created from folder: ${folderName}`);
       created.push(mapQr(qr.toObject()));
     } catch (err) {
@@ -229,18 +200,9 @@ router.post('/bulk-create-2/primary', requireAuth, qrUpload.array('files', 500),
         collection: collectionId || null
       });
 
-      await Upload.create({
-        qrCode: qr._id,
-        originalName: file.originalname,
-        storedName: file.filename,
-        mimeType: file.mimetype,
-        sizeBytes: file.size,
-        category: getFileCategory(file.mimetype),
-        path: file.path,
-        order: 0
-      });
+      await Upload.create(buildUploadDoc(file, qr._id, 0));
 
-      await recalculateSize(qr._id);
+      await recalculateQrSize(qr._id);
       await logActivity('QR_CREATED', qr._id, `QR created from primary file: ${title}`);
       created.push(mapQr(qr.toObject()));
     } catch (err) {
@@ -320,20 +282,13 @@ router.post('/bulk-create-2/associated', requireAuth, qrUpload.array('files', 50
     nextOrderByQr.set(qrId, order + 1);
     matchedQrIds.add(qrId);
     uploadDocs.push({
-      qrCode: qr._id,
-      originalName: file.originalname,
-      storedName: file.filename,
-      mimeType: file.mimetype,
-      sizeBytes: file.size,
-      category: getFileCategory(file.mimetype),
-      path: file.path,
-      order
+      ...buildUploadDoc(file, qr._id, order)
     });
   }
 
   if (uploadDocs.length) {
     await Upload.insertMany(uploadDocs);
-    await Promise.all(Array.from(matchedQrIds).map((qrId) => recalculateSize(qrId)));
+    await Promise.all(Array.from(matchedQrIds).map((qrId) => recalculateQrSize(qrId)));
     await Promise.all(
       Array.from(matchedQrIds).map((qrId) => logActivity('QR_MODIFIED', qrId, 'Associated files added by Bulk Create 2'))
     );
@@ -391,19 +346,10 @@ router.post('/:id/files', requireAuth, qrUpload.array('files', 4), handleUploadE
   }
 
   const docs = await Upload.insertMany(
-    req.files.map((file, index) => ({
-      qrCode: qr._id,
-      originalName: file.originalname,
-      storedName: file.filename,
-      mimeType: file.mimetype,
-      sizeBytes: file.size,
-      category: getFileCategory(file.mimetype),
-      path: file.path,
-      order: existing + index
-    }))
+    req.files.map((file, index) => buildUploadDoc(file, qr._id, existing + index))
   );
 
-  await recalculateSize(qr._id);
+  await recalculateQrSize(qr._id);
   res.status(201).json({ uploads: docs });
 });
 
@@ -434,11 +380,11 @@ router.put('/:id/files/:uploadId/replace', requireAuth, qrUpload.single('file'),
   upload.originalName = req.file.originalname;
   upload.storedName = req.file.filename;
   upload.mimeType = req.file.mimetype;
-  upload.sizeBytes = req.file.size;
+  upload.sizeBytes = buildUploadDoc(req.file, upload.qrCode, upload.order).sizeBytes;
   upload.category = getFileCategory(req.file.mimetype);
   upload.path = req.file.path;
   await upload.save();
-  await recalculateSize(upload.qrCode);
+  await recalculateQrSize(upload.qrCode);
   res.json({ upload });
 });
 
@@ -453,7 +399,7 @@ router.delete('/:id/files/:uploadId', requireAuth, async (req, res) => {
     { itemType: 'upload', qrCode: upload._id, upload: upload._id, deletedBy: req.admin._id, deletedAt: upload.deletedAt, snapshot: upload.toObject() },
     { upsert: true }
   );
-  await recalculateSize(upload.qrCode);
+  await recalculateQrSize(upload.qrCode);
   await logActivity('FILE_DELETED', upload.qrCode, `File moved to recycle bin: ${upload.originalName}`);
   res.json({ message: 'File moved to recycle bin.' });
 });

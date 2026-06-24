@@ -10,6 +10,7 @@ import { uploadRoot, removeUploadFile } from '../utils/storage.js';
 import { logActivity } from '../utils/activity.js';
 import { env } from '../config/env.js';
 import { asyncRouter } from '../utils/asyncRouter.js';
+import { moveCollectionToRecycle } from '../services/qrLifecycle.js';
 
 const pdfUpload = multer({
   storage: multer.diskStorage({
@@ -123,7 +124,17 @@ const router = asyncRouter(express.Router());
 
 router.get('/', requireAuth, async (req, res) => {
   const items = await Collection.find({ status: { $ne: 'deleted' } }).sort({ createdAt: -1 }).lean();
-  res.json({ items });
+  const qrCounts = await QRCode.aggregate([
+    { $match: { status: { $ne: 'deleted' }, collection: { $ne: null } } },
+    { $group: { _id: '$collection', count: { $sum: 1 } } }
+  ]);
+  const countMap = new Map(qrCounts.map((item) => [String(item._id), item.count]));
+  res.json({
+    items: items.map((item) => ({
+      ...item,
+      qrCount: countMap.get(String(item._id)) || 0
+    }))
+  });
 });
 
 router.post('/', requireAuth, pdfUpload.single('defaultPdf'), handlePdfError, async (req, res) => {
@@ -177,19 +188,8 @@ router.put('/:id', requireAuth, pdfUpload.single('defaultPdf'), handlePdfError, 
 });
 
 router.delete('/:id', requireAuth, async (req, res) => {
-  const col = await Collection.findById(req.params.id);
-  if (!col || col.status === 'deleted') return res.status(404).json({ message: 'Collection not found.' });
-
-  col.status = 'deleted';
-  col.deletedAt = new Date();
-  await col.save();
-
-  await RecycleBin.updateOne(
-    { collection: col._id },
-    { itemType: 'collection', qrCode: col._id, collection: col._id, deletedBy: req.admin._id, deletedAt: col.deletedAt, snapshot: col.toObject() },
-    { upsert: true }
-  );
-  await logActivity('COLLECTION_DELETED', col._id, `Collection moved to recycle bin: ${col.name}`);
+  const col = await moveCollectionToRecycle(req.params.id, req.admin._id);
+  if (!col) return res.status(404).json({ message: 'Collection not found.' });
   res.json({ message: 'Collection moved to recycle bin.' });
 });
 

@@ -7,9 +7,12 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext.jsx';
+import { ThemeProvider } from './context/ThemeContext.jsx';
+import { useAuth } from './context/AuthContext.jsx';
 
 import App from './App.jsx';
 import Login from './pages/Login.jsx';
+import Landing from './pages/Landing.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Collections from './pages/Collections.jsx';
 import CollectionDetail from './pages/CollectionDetail.jsx';
@@ -18,33 +21,47 @@ import QRDetail from './pages/QRDetail.jsx';
 import RecycleBin from './pages/RecycleBin.jsx';
 import Settings from './pages/Settings.jsx';
 import Viewer from './pages/Viewer.jsx';
+import NotFound from './pages/NotFound.jsx';
+import { routes } from './routes/paths.js';
 
 import './styles/global.css';
 
 function ProtectedRoute({ children }) {
-  const token = localStorage.getItem('dv_token');
-
-  if (!token) {
-    return <Navigate to="/login" replace />;
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to={routes.login} replace />;
   }
+  return children;
+}
 
+function PublicOnlyRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) {
+    return <Navigate to={routes.dashboard} replace />;
+  }
   return children;
 }
 
 const router = createBrowserRouter(
   [
     {
-      path: '/login',
-      element: <Login />
+      path: routes.landing,
+      element: <Landing />
     },
-
     {
-      path: '/vault/:token',
+      path: routes.login,
+      element: (
+        <PublicOnlyRoute>
+          <Login />
+        </PublicOnlyRoute>
+      )
+    },
+    {
+      path: routes.viewer(),
       element: <Viewer />
     },
-
     {
-      path: '/',
+      path: routes.adminRoot,
       element: (
         <ProtectedRoute>
           <App />
@@ -59,6 +76,10 @@ const router = createBrowserRouter(
         { path: 'recycle-bin', element: <RecycleBin /> },
         { path: 'settings', element: <Settings /> }
       ]
+    },
+    {
+      path: '*',
+      element: <NotFound />
     }
   ],
   {
@@ -72,7 +93,9 @@ const router = createBrowserRouter(
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />
+      <ThemeProvider>
+        <RouterProvider router={router} />
+      </ThemeProvider>
     </AuthProvider>
   </StrictMode>
 );

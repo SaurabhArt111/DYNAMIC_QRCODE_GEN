@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FolderOpen, Plus, Trash2, Edit2, FileText, Download } from 'lucide-react';
 import { api } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
+import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './Collections.css';
 
@@ -71,7 +72,7 @@ export default function Collections() {
   }
 
   async function deleteCollection(col) {
-    if (!window.confirm(`Delete collection "${col.name}"? QR codes inside will be unlinked (not deleted).`)) return;
+    if (!window.confirm(`Delete collection "${col.name}"? All QR codes inside it will move to the Recycle Bin too.`)) return;
     try {
       await api.delete(`/collections/${col._id}`);
       await load();
@@ -134,7 +135,7 @@ export default function Collections() {
             )}
             <div className="col-meta">{formatDate(col.createdAt)}</div>
             <div className="button-row">
-              <Link className="primary-button" to={`/collections/${col._id}`}>Open</Link>
+              <Link className="primary-button" to={routes.collection(col._id)}>Open</Link>
               <button className="icon-button" title="Edit" onClick={() => openEdit(col)}><Edit2 size={16} /></button>
               <button className="icon-button danger" title="Delete" onClick={() => deleteCollection(col)}><Trash2 size={16} /></button>
               <button

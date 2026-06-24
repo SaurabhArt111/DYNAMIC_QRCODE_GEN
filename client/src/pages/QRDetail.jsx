@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Copy, Download, ExternalLink, FileText, GripVertical, Save, Trash2, UploadCloud, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, Copy, Download, ExternalLink, FileText, GripVertical, RefreshCw, Save, Trash2, UploadCloud, X } from 'lucide-react';
 import { api, fileUrl } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
+import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './QRDetail.css';
 
@@ -90,7 +91,7 @@ export default function QRDetail() {
   async function recycle() {
     setBusyAction('recycle');
     await api.post(`/qrcodes/${id}/recycle`);
-    navigate('/qrcodes');
+    navigate(qr.collectionId ? routes.collection(qr.collectionId) : routes.qrcodes);
   }
 
   async function downloadQr() {
@@ -133,11 +134,17 @@ export default function QRDetail() {
   }
 
   const { qr, uploads, collectionPdf } = data;
+  const parentCollectionId = collectionPdf?.collectionId || qr.collectionId || null;
+  const backTarget = parentCollectionId ? routes.collection(parentCollectionId) : routes.qrcodes;
 
   return (
     <section className="page">
       <div className="page-header">
         <div>
+          <button className="back-btn" onClick={() => navigate(backTarget)}>
+            <ArrowLeft size={16} />
+            {parentCollectionId ? 'Back to Collection' : 'Back to QR Codes'}
+          </button>
           <h1>{qr.name}</h1>
           <p>{qr.token}</p>
         </div>
@@ -223,10 +230,13 @@ export default function QRDetail() {
                 </div>
               </div>
               <div className="file-actions">
-                <button className="icon-button" onClick={() => reorderFiles(index, index - 1)} disabled={index === 0 || busyAction === 'reorder'} title="Move up"><span>↑</span></button>
-                <button className="icon-button" onClick={() => reorderFiles(index, index + 1)} disabled={index === uploads.length - 1 || busyAction === 'reorder'} title="Move down"><span>↓</span></button>
+                <button className="icon-button" onClick={() => reorderFiles(index, index - 1)} disabled={index === 0 || busyAction === 'reorder'} title="Move up"><ArrowUp size={14} /></button>
+                <button className="icon-button" onClick={() => reorderFiles(index, index + 1)} disabled={index === uploads.length - 1 || busyAction === 'reorder'} title="Move down"><ArrowDown size={14} /></button>
                 <a className="icon-button" href={fileUrl(`/api/vault/${qr.token}/files/${file._id}/download`)} title="Download"><Download size={16} /></a>
-                <label className="icon-button" title="Replace file">{busyAction === `replace-${file._id}` ? '…' : '↻'}<input hidden type="file" onChange={(event) => replaceFile(file._id, event)} /></label>
+                <label className="icon-button" title="Replace file">
+                  {busyAction === `replace-${file._id}` ? <span className="spinner small-spinner" /> : <RefreshCw size={14} />}
+                  <input hidden type="file" onChange={(event) => replaceFile(file._id, event)} />
+                </label>
                 <button className="icon-button danger" onClick={() => removeFile(file._id)} disabled={busyAction === `remove-${file._id}`} aria-label="Remove file"><Trash2 size={16} /></button>
               </div>
             </article>
@@ -239,7 +249,7 @@ export default function QRDetail() {
                 <FileText size={18} className="col-pdf-icon" />
                 <div>
                   <strong>{collectionPdf.originalName}</strong>
-                  <span>Collection PDF — {collectionPdf.collectionName} — {formatBytes(collectionPdf.sizeBytes)}</span>
+                  <span>Collection PDF - {collectionPdf.collectionName} - {formatBytes(collectionPdf.sizeBytes)}</span>
                 </div>
               </div>
               <div className="file-actions">

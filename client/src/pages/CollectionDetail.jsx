@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { api } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
+import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './CollectionDetail.css';
 
@@ -43,7 +44,7 @@ export default function CollectionDetail() {
       setCol(data.collection);
       setQrItems(data.items);
     } catch {
-      navigate('/collections');
+      navigate(routes.collections);
     } finally {
       setLoading(false);
     }
@@ -262,7 +263,7 @@ export default function CollectionDetail() {
     <section className="page">
       <div className="page-header">
         <div>
-          <button className="back-btn" onClick={() => navigate('/collections')}><ArrowLeft size={16} /> Collections</button>
+          <button className="back-btn" onClick={() => navigate(routes.collections)}><ArrowLeft size={16} /> Collections</button>
           <h1>{col?.name || '...'}</h1>
           {col?.description && <p>{col.description}</p>}
           {col?.defaultPdf && (
@@ -313,7 +314,7 @@ export default function CollectionDetail() {
               <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
             </dl>
             <div className="button-row">
-              <Link className="primary-button" to={`/qrcodes/${qr._id}`}>Manage</Link>
+              <Link className="primary-button" to={routes.qrcode(qr._id)}>Manage</Link>
               <button className="icon-button" title="Download QR" onClick={() => downloadQrImage(qr)} disabled={busy === `dl-${qr._id}`}>
                 {busy === `dl-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
               </button>
