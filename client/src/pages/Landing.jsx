@@ -33,7 +33,6 @@ export default function Landing() {
             <span>{appName}</span>
           </div>
           <div className="landing-actions">
-            <Link className="secondary-button" to={routes.login}>Admin Login</Link>
             <Link className="primary-button" to={routes.dashboard}>
               Open Control Center
               <ArrowRight size={18} />
@@ -48,11 +47,6 @@ export default function Landing() {
             A clean public front door for visitors, with the full QR operations workspace tucked behind a secure admin control path.
           </p>
           <div className="landing-cta-row">
-            <Link className="primary-button" to={routes.dashboard}>
-              Enter Admin Workspace
-              <ArrowRight size={18} />
-            </Link>
-            <Link className="secondary-button" to={routes.login}>Sign In</Link>
           </div>
         </div>
 
