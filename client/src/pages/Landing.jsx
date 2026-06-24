@@ -26,40 +26,55 @@ const features = [
 export default function Landing() {
   return (
     <main className="landing-page">
+      {/* Signature gradient bar */}
+      <div className="landing-gradient-bar"></div>
+
       <section className="landing-hero">
         <header className="landing-topbar">
           <div className="landing-brand">
-            <QrCode size={24} />
+            <QrCode size={24} strokeWidth={1.5} />
             <span>{appName}</span>
           </div>
-          <div className="landing-actions">
-            <Link className="primary-button" to={routes.dashboard}>
-              Open Control Center
-              <ArrowRight size={18} />
+          <nav className="landing-nav">
+            <Link className="landing-link" to={routes.dashboard}>
+              <span>Control Center</span>
+              <ArrowRight size={18} strokeWidth={1.5} />
             </Link>
-          </div>
+          </nav>
         </header>
 
+        {/* Hero copy section */}
         <div className="landing-copy">
           <p className="landing-kicker">Dynamic QR management platform</p>
-          <h1>{appName}</h1>
+          <h1 className="landing-headline">{appName}</h1>
           <p className="landing-summary">
             A clean public front door for visitors, with the full QR operations workspace tucked behind a secure admin control path.
           </p>
-          <div className="landing-cta-row">
-          </div>
         </div>
 
-        <div className="landing-overview">
-          {features.map(({ title, text, icon: Icon }) => (
-            <article className="landing-feature" key={title}>
-              <Icon size={20} />
-              <strong>{title}</strong>
-              <p>{text}</p>
-            </article>
-          ))}
+        {/* Features grid */}
+        <div className="landing-features">
+          <div className="landing-features-header">
+            <h2>Core capabilities</h2>
+            <div className="landing-features-divider"></div>
+          </div>
+
+          <div className="landing-features-grid">
+            {features.map(({ title, text, icon: Icon }, idx) => (
+              <article className="landing-feature" key={title} style={{ '--feature-index': idx }}>
+                <div className="landing-feature-icon">
+                  <Icon size={20} strokeWidth={1.5} />
+                </div>
+                <strong>{title}</strong>
+                <p>{text}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
+
+      {/* Bottom accent bar */}
+      <div className="landing-footer-accent"></div>
     </main>
   );
 }
