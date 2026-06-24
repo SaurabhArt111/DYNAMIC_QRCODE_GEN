@@ -1,8 +1,3 @@
-/* ============================================
-   404 Page - Unified Color Theory
-   Palette: Terracotta (#c24109), Maroon (#4a141b), Cream (#f5efe7)
-   ============================================ */
-
 .not-found-page {
   min-height: 100vh;
   display: flex;
@@ -12,7 +7,6 @@
   position: relative;
   overflow: hidden;
 
-  /* Same sophisticated gradient as landing, inverted for error context */
   background:
     radial-gradient(circle at bottom right, rgba(194, 65, 12, 0.14), transparent 32%),
     radial-gradient(circle at top left, rgba(74, 20, 27, 0.12), transparent 30%),

@@ -32,12 +32,12 @@ export default function Landing() {
             <QrCode size={24} />
             <span>{appName}</span>
           </div>
-          <nav className="landing-nav">
-            <Link className="landing-nav-link" to={routes.dashboard}>
+          <div className="landing-actions">
+            <Link className="primary-button" to={routes.dashboard}>
               Open Control Center
               <ArrowRight size={18} />
             </Link>
-          </nav>
+          </div>
         </header>
 
         <div className="landing-copy">
@@ -46,19 +46,15 @@ export default function Landing() {
           <p className="landing-summary">
             A clean public front door for visitors, with the full QR operations workspace tucked behind a secure admin control path.
           </p>
+          <div className="landing-cta-row">
+          </div>
         </div>
 
         <div className="landing-overview">
-          {features.map(({ title, text, icon: Icon }, index) => (
-            <article 
-              className="landing-feature" 
-              key={title}
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <div className="landing-feature-icon">
-                <Icon size={20} />
-              </div>
-              <h3>{title}</h3>
+          {features.map(({ title, text, icon: Icon }) => (
+            <article className="landing-feature" key={title}>
+              <Icon size={20} />
+              <strong>{title}</strong>
               <p>{text}</p>
             </article>
           ))}

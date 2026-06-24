@@ -26,12 +26,8 @@ export default function NotFound() {
           <div className="not-found-actions">
             <Link className="not-found-btn not-found-btn--primary" to={routes.landing}>
               <Home size={18} />
-              <span>Return to Dashboard</span>
+              <span>Return to Home</span>
             </Link>
-            <button className="not-found-btn not-found-btn--secondary" onClick={() => window.history.back()}>
-              <ArrowLeft size={18} />
-              <span>Go Back</span>
-            </button>
           </div>
         </div>
 
