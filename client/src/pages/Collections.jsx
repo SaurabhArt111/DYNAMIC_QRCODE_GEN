@@ -133,6 +133,9 @@ export default function Collections() {
             ) : (
               <div className="col-pdf-badge col-pdf-none">No default PDF</div>
             )}
+            <div className="col-stats">
+              <span>{col.qrCount || 0} QR codes</span>
+            </div>
             <div className="col-meta">{formatDate(col.createdAt)}</div>
             <div className="button-row">
               <Link className="primary-button" to={routes.collection(col._id)}>Open</Link>

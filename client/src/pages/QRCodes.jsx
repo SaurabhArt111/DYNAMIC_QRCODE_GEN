@@ -113,6 +113,7 @@ export default function QRCodes() {
             <dl>
               <div><dt>Size</dt><dd>{formatBytes(qr.sizeBytes)}</dd></div>
               <div><dt>Status</dt><dd>{qr.status}</dd></div>
+              <div><dt>Collection</dt><dd>{qr.collectionName || 'Standalone'}</dd></div>
               <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
             </dl>
             <div className="button-row">

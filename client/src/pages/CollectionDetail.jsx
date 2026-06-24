@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft, Plus, Download, Trash, Search, FolderUp, FileText, CheckCircle2, XCircle, Loader
+  ArrowLeft, Plus, Download, Trash, Search, FolderUp, FileText, CheckCircle2, XCircle, Loader, HardDrive, QrCode
 } from 'lucide-react';
 import { api } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
@@ -14,6 +14,7 @@ export default function CollectionDetail() {
   const navigate = useNavigate();
   const [col, setCol] = useState(null);
   const [qrItems, setQrItems] = useState([]);
+  const [collectionStats, setCollectionStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [modal, setModal] = useState(null);
@@ -43,6 +44,7 @@ export default function CollectionDetail() {
       const { data } = await api.get(`/collections/${id}/qrcodes`, { params: { search: query, limit: 50 } });
       setCol(data.collection);
       setQrItems(data.items);
+      setCollectionStats(data.stats || null);
     } catch {
       navigate(routes.collections);
     } finally {
@@ -290,6 +292,15 @@ export default function CollectionDetail() {
 
       <div className="qr-toolbar">
         {error && <div className="error-box">{error}</div>}
+        {collectionStats && (
+          <div className="collection-stat-row">
+            <div className="collection-stat-chip"><QrCode size={15} /> {collectionStats.qrCount} QR codes</div>
+            <div className="collection-stat-chip"><HardDrive size={15} /> {formatBytes(collectionStats.totalBytes || 0)} QR files</div>
+            {!!collectionStats.defaultPdfBytes && (
+              <div className="collection-stat-chip"><FileText size={15} /> {formatBytes(collectionStats.defaultPdfBytes)} default PDF</div>
+            )}
+          </div>
+        )}
         <div className="search-box">
           <Search size={18} />
           <input placeholder="Search QR codes" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load()} />
@@ -472,12 +483,12 @@ export default function CollectionDetail() {
                     <div className="bulk-folder-list bulk-file-list">
                       {bulk2PrimaryFiles.map((file) => (
                         <div className="bulk-folder-row" key={`${file.name}-${file.size}`}>
-                          <div>
-                            <strong>{fileTitle(file)}</strong>
-                            <span>{file.name}</span>
-                          </div>
+                        <div>
+                          <strong>{fileTitle(file)}</strong>
+                          <span>{file.name} - {formatBytes(file.size)}</span>
                         </div>
-                      ))}
+                      </div>
+                    ))}
                     </div>
                   )}
                   <button
@@ -512,10 +523,10 @@ export default function CollectionDetail() {
               {bulk2AssociatedFiles.length > 0 && (
                 <div className="bulk-folder-list bulk-file-list">
                   {bulk2AssociatedFiles.map((file) => (
-                    <div className="bulk-folder-row" key={`${file.name}-${file.size}-${file.lastModified}`}>
+                      <div className="bulk-folder-row" key={`${file.name}-${file.size}-${file.lastModified}`}>
                       <div>
                         <strong>{fileTitle(file)}</strong>
-                        <span>{file.name}</span>
+                        <span>{file.name} - {formatBytes(file.size)}</span>
                       </div>
                     </div>
                   ))}

@@ -22,6 +22,49 @@
   margin: 0 0 18px;
 }
 
+.recycle-toolbar {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.recycle-query-row,
+.recycle-bulk-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.recycle-search {
+  flex: 1 1 320px;
+}
+
+.recycle-search {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.recycle-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  min-height: 38px;
+  color: var(--text);
+}
+
+.recycle-selection-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .recycle-list {
   display: grid;
   gap: 10px;
@@ -32,15 +75,45 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 16px;
   align-items: center;
 }
 
+.recycle-check {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--muted);
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+}
+
+.recycle-item-copy {
+  min-width: 0;
+}
+
+.recycle-item-copy strong,
 .recycle-row span {
   display: block;
+}
+
+.recycle-row span {
   margin-top: 4px;
+  color: var(--muted);
+}
+
+.recycle-empty {
+  margin: 0;
+  padding: 28px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
   color: var(--muted);
 }
 
@@ -58,7 +131,13 @@
   height: 18px;
 }
 
-.recycle-row-skeleton div:first-child span {
+.recycle-row-skeleton .recycle-select-cell span {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.recycle-row-skeleton div:nth-child(2) span {
   width: 260px;
   height: 13px;
 }
@@ -76,9 +155,12 @@
   }
 }
 
-@media (max-width: 650px) {
+@media (max-width: 820px) {
   .recycle-row {
-    align-items: stretch;
-    flex-direction: column;
+    grid-template-columns: auto 1fr;
+  }
+
+  .recycle-row .button-row {
+    grid-column: 1 / -1;
   }
 }

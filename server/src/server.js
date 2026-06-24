@@ -13,6 +13,8 @@ import recycleRoutes from './routes/recycleRoutes.js';
 import viewerRoutes from './routes/viewerRoutes.js';
 import collectionRoutes from './routes/collectionRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import { RecycleBin } from './models/RecycleBin.js';
+import { QRCode } from './models/QRCode.js';
 import { errorHandler, notFound } from './middleware/notFound.js';
 
 const app = express();
@@ -68,6 +70,10 @@ app.use(errorHandler);
 
 await ensureUploadRoot();
 await connectDb();
+await Promise.all([
+  RecycleBin.syncIndexes(),
+  QRCode.syncIndexes()
+]);
 
 app.listen(env.port, () => {
   console.log(`${env.appName} API running on port ${env.port}`);

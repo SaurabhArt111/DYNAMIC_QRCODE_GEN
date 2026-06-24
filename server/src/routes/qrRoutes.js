@@ -22,7 +22,12 @@ function vaultUrl(token) {
 }
 
 function mapQr(qr) {
-  return { ...qr, collectionId: qr.collection || null, vaultUrl: vaultUrl(qr.token) };
+  return {
+    ...qr,
+    collectionId: qr.collection?._id || qr.collection || null,
+    collectionName: qr.collection?.name || null,
+    vaultUrl: vaultUrl(qr.token)
+  };
 }
 
 function filenameTitle(fileName) {
@@ -73,6 +78,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   const [items, total] = await Promise.all([
     QRCode.find(query)
+      .populate('collection', 'name')
       .sort(sorts[filter] || sorts.new)
       .skip((page - 1) * limit)
       .limit(limit)

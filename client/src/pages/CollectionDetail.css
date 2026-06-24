@@ -1,20 +1,3 @@
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--muted);
-  font-size: 0.84rem;
-  padding: 0 0 6px;
-  font-weight: 600;
-}
-
-.back-btn:hover {
-  color: var(--primary);
-}
-
 .col-pdf-indicator {
   display: inline-flex;
   align-items: center;
@@ -30,6 +13,26 @@
 
 .col-pdf-indicator svg {
   color: var(--primary);
+}
+
+.collection-stat-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.collection-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 /* Bulk modal */

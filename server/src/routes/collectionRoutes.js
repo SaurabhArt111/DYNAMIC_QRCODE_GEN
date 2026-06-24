@@ -210,8 +210,23 @@ router.get('/:id/qrcodes', requireAuth, async (req, res) => {
     QRCode.find(query).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
     QRCode.countDocuments(query)
   ]);
+  const sizeTotals = await QRCode.aggregate([
+    { $match: { collection: col._id, status: { $ne: 'deleted' } } },
+    { $group: { _id: '$collection', bytes: { $sum: '$sizeBytes' } } }
+  ]);
 
-  res.json({ items, total, page, pages: Math.ceil(total / limit), collection: col });
+  res.json({
+    items,
+    total,
+    page,
+    pages: Math.ceil(total / limit),
+    collection: col,
+    stats: {
+      qrCount: total,
+      totalBytes: sizeTotals[0]?.bytes || 0,
+      defaultPdfBytes: col.defaultPdf?.sizeBytes || 0
+    }
+  });
 });
 
 router.get('/:id/qr-images.zip', requireAuth, async (req, res) => {
