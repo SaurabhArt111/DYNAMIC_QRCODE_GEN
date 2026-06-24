@@ -28,10 +28,15 @@
 }
 
 .not-found-code {
-  margin: 0;
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  display: block;
+  font-size: clamp(5rem, 15vw, 8rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #4A141B 0%, #4a1d14 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
 }
 
 .not-found-panel h1 {
