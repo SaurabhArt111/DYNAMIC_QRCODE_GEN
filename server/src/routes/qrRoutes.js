@@ -265,12 +265,14 @@ router.post('/bulk-create-2/associated', requireAuth, qrUpload.array('files', 50
   }
 
   if (!files.length) return res.status(400).json({ message: 'No associated files uploaded.' });
-  if (!Array.isArray(qrIds) || !qrIds.length) {
+  if (!collectionId && (!Array.isArray(qrIds) || !qrIds.length)) {
     await Promise.all(files.map((file) => removeUploadFile(file.path).catch(() => {})));
-    return res.status(400).json({ message: 'No QR batch supplied for matching.' });
+    return res.status(400).json({ message: 'Select a collection or QR batch for matching.' });
   }
 
-  const qrQuery = { _id: { $in: qrIds }, status: { $ne: 'deleted' } };
+  const scopedQrIds = Array.isArray(qrIds) ? qrIds.filter(Boolean) : [];
+  const qrQuery = { status: { $ne: 'deleted' } };
+  if (scopedQrIds.length) qrQuery._id = { $in: scopedQrIds };
   if (collectionId) qrQuery.collection = collectionId;
   const qrs = await QRCode.find(qrQuery).lean();
   if (!qrs.length) {
@@ -278,7 +280,13 @@ router.post('/bulk-create-2/associated', requireAuth, qrUpload.array('files', 50
     return res.status(404).json({ message: 'No matching QR codes found for this batch.' });
   }
 
-  const qrByTitle = new Map(qrs.map((qr) => [matchKey(qr.name), qr]));
+  const qrByTitle = new Map();
+  const ambiguousTitles = new Set();
+  for (const qr of qrs) {
+    const key = matchKey(qr.name);
+    if (qrByTitle.has(key)) ambiguousTitles.add(key);
+    qrByTitle.set(key, qr);
+  }
   const qrObjectIds = qrs.map((qr) => qr._id);
   const existingCounts = await Upload.aggregate([
     { $match: { qrCode: { $in: qrObjectIds }, status: { $ne: 'deleted' } } },
@@ -288,10 +296,18 @@ router.post('/bulk-create-2/associated', requireAuth, qrUpload.array('files', 50
   const uploadDocs = [];
   const matchedQrIds = new Set();
   const unmatched = [];
+  const ambiguous = [];
 
   for (const file of files) {
     const title = filenameTitle(file.originalname);
-    const qr = qrByTitle.get(matchKey(title));
+    const key = matchKey(title);
+    const qr = qrByTitle.get(key);
+
+    if (ambiguousTitles.has(key)) {
+      ambiguous.push(file.originalname);
+      await removeUploadFile(file.path).catch(() => {});
+      continue;
+    }
 
     if (!qr) {
       unmatched.push(file.originalname);
@@ -325,6 +341,7 @@ router.post('/bulk-create-2/associated', requireAuth, qrUpload.array('files', 50
 
   res.status(201).json({
     matched: uploadDocs.length,
+    ambiguous,
     unmatched,
     qrMatched: matchedQrIds.size
   });

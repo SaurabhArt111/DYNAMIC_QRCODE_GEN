@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Download, Trash, Search, FolderUp, FileText, CheckCircle2, XCircle, Loader
@@ -233,13 +233,15 @@ export default function CollectionDetail() {
   }
 
   async function runBulkCreate2Associated() {
-    if (!bulk2Created.length || !bulk2AssociatedFiles.length) return;
+    if (!bulk2AssociatedFiles.length) return;
     setBusy('bulk2-associated');
     setError('');
     try {
       const fd = new FormData();
       fd.append('collectionId', id);
-      fd.append('qrIds', JSON.stringify(bulk2Created.map((qr) => qr._id)));
+      if (bulk2Created.length) {
+        fd.append('qrIds', JSON.stringify(bulk2Created.map((qr) => qr._id)));
+      }
       for (const file of bulk2AssociatedFiles) {
         fd.append('files', file, file.name);
       }
@@ -438,7 +440,7 @@ export default function CollectionDetail() {
         <Modal title="Bulk Create 2" onClose={() => { setModal(null); resetBulk2(); }}>
           <div className="bulk-modal">
             {error && <div className="error-box">{error}</div>}
-            <p className="bulk-intro">Upload primary files first. Each file creates one QR code using the filename without its extension as the title. After that, upload an associated folder and matching files will attach to those QR codes by filename only.</p>
+            <p className="bulk-intro">Create QRs from primary files, or upload associated files later. Associated files are matched to QR titles in this collection by filename only, ignoring extensions.</p>
 
             <input
               ref={primaryInputRef}
@@ -450,7 +452,6 @@ export default function CollectionDetail() {
             <input
               ref={associatedInputRef}
               type="file"
-              webkitdirectory="true"
               multiple
               hidden
               onChange={onBulk2AssociatedInput}
@@ -499,45 +500,44 @@ export default function CollectionDetail() {
               )}
             </div>
 
-            {bulk2Created.length > 0 && (
-              <div className="bulk-step">
-                <div className="bulk-step-header">
-                  <strong>2. Associated folder</strong>
-                  <span>{bulk2AssociatedFiles.length} file(s) selected</span>
-                </div>
-                <button className="secondary-button bulk-pick-btn" onClick={() => associatedInputRef.current?.click()}>
-                  <FolderUp size={18} /> {bulk2AssociatedFiles.length ? 'Choose different associated folder' : 'Select Associated Folder'}
-                </button>
-                {bulk2AssociatedFiles.length > 0 && (
-                  <div className="bulk-folder-list bulk-file-list">
-                    {bulk2AssociatedFiles.map((file) => (
-                      <div className="bulk-folder-row" key={`${file.webkitRelativePath || file.name}-${file.size}`}>
-                        <div>
-                          <strong>{fileTitle(file)}</strong>
-                          <span>{file.webkitRelativePath || file.name}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="button-row">
-                  <button className="secondary-button" onClick={() => { setModal(null); resetBulk2(); }}>Done</button>
-                  <button
-                    className="primary-button"
-                    onClick={runBulkCreate2Associated}
-                    disabled={!bulk2AssociatedFiles.length || busy === 'bulk2-associated'}
-                  >
-                    {busy === 'bulk2-associated' ? 'Attaching...' : 'Attach Matching Files'}
-                  </button>
-                </div>
+            <div className="bulk-step">
+              <div className="bulk-step-header">
+                <strong>2. Associated files</strong>
+                <span>{bulk2AssociatedFiles.length} file(s) selected</span>
               </div>
-            )}
+              <button className="secondary-button bulk-pick-btn" onClick={() => associatedInputRef.current?.click()}>
+                <FolderUp size={18} /> {bulk2AssociatedFiles.length ? 'Choose different associated files' : 'Select Associated Files'}
+              </button>
+              {bulk2AssociatedFiles.length > 0 && (
+                <div className="bulk-folder-list bulk-file-list">
+                  {bulk2AssociatedFiles.map((file) => (
+                    <div className="bulk-folder-row" key={`${file.name}-${file.size}-${file.lastModified}`}>
+                      <div>
+                        <strong>{fileTitle(file)}</strong>
+                        <span>{file.name}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="button-row">
+                <button className="secondary-button" onClick={() => { setModal(null); resetBulk2(); }}>Done</button>
+                <button
+                  className="primary-button"
+                  onClick={runBulkCreate2Associated}
+                  disabled={!bulk2AssociatedFiles.length || busy === 'bulk2-associated'}
+                >
+                  {busy === 'bulk2-associated' ? 'Attaching...' : 'Attach Matching Files'}
+                </button>
+              </div>
+            </div>
 
             {bulk2Result?.phase === 'associated' && (
               <div className="bulk-results">
                 <div className="bulk-results-header">
                   <strong>{bulk2Result.matched || 0} file(s) attached</strong>
                   {!!bulk2Result.unmatched?.length && <span className="bulk-errors">{bulk2Result.unmatched.length} unmatched</span>}
+                  {!!bulk2Result.ambiguous?.length && <span className="bulk-errors">{bulk2Result.ambiguous.length} duplicate title match</span>}
                 </div>
                 {!!bulk2Result.unmatched?.length && (
                   <div className="bulk-result-list">
@@ -545,6 +545,17 @@ export default function CollectionDetail() {
                       <div className="bulk-result-row error" key={name}>
                         <XCircle size={15} />
                         <strong>{name}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!!bulk2Result.ambiguous?.length && (
+                  <div className="bulk-result-list">
+                    {bulk2Result.ambiguous.map((name) => (
+                      <div className="bulk-result-row error" key={name}>
+                        <XCircle size={15} />
+                        <strong>{name}</strong>
+                        <span className="bulk-err-msg">Multiple QR titles match this filename.</span>
                       </div>
                     ))}
                   </div>

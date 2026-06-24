@@ -20,13 +20,24 @@
   gap: 10px;
 }
 
-.col-icon { color: var(--primary); }
+.col-icon {
+  color: var(--primary);
+}
 
-.col-card-header strong { font-size: 1.05rem; }
+.col-card-header strong {
+  font-size: 1.05rem;
+}
 
-.col-desc { margin: 0; font-size: 0.88rem; color: var(--muted); }
+.col-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
 
-.col-meta { font-size: 0.8rem; color: var(--muted); }
+.col-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
 
 .col-pdf-badge {
   display: flex;
@@ -40,11 +51,22 @@
   color: var(--text);
 }
 
-.col-pdf-badge svg { color: var(--primary); flex-shrink: 0; }
+.col-pdf-badge svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
 
-.col-pdf-size { margin-left: auto; color: var(--muted); white-space: nowrap; }
+.col-pdf-size {
+  margin-left: auto;
+  color: var(--muted);
+  white-space: nowrap;
+}
 
-.col-pdf-none { color: var(--muted); font-style: italic; border-style: dashed; }
+.col-pdf-none {
+  color: var(--muted);
+  font-style: italic;
+  border-style: dashed;
+}
 
 .col-empty {
   grid-column: 1 / -1;
@@ -56,7 +78,10 @@
   background: var(--surface);
 }
 
-.col-card-skeleton { min-height: 180px; }
+.col-card-skeleton {
+  min-height: 180px;
+}
+
 .col-card-skeleton span,
 .col-card-skeleton p,
 .col-card-skeleton div {
@@ -66,13 +91,29 @@
   background-size: 220% 100%;
   animation: qrSkeleton 1.15s ease-in-out infinite;
 }
-.col-card-skeleton span { width: 60%; }
-.col-card-skeleton p { width: 88%; }
-.col-card-skeleton div { min-height: 36px; }
 
-.modal-form { display: grid; gap: 16px; }
+.col-card-skeleton span {
+  width: 60%;
+}
 
-.field-hint { margin: 4px 0 0; font-size: 0.82rem; color: var(--muted); }
+.col-card-skeleton p {
+  width: 88%;
+}
+
+.col-card-skeleton div {
+  min-height: 36px;
+}
+
+.modal-form {
+  display: grid;
+  gap: 16px;
+}
+
+.field-hint {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
 
 .existing-pdf {
   display: flex;
@@ -85,9 +126,16 @@
   margin-bottom: 6px;
 }
 
-.existing-pdf svg { color: var(--primary); }
+.existing-pdf svg {
+  color: var(--primary);
+}
 
-.pdf-pick-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pdf-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
 .remove-btn-sm {
   background: none;
@@ -111,5 +159,7 @@
 }
 
 @media (max-width: 620px) {
-  .col-grid { grid-template-columns: 1fr; }
+  .col-grid {
+    grid-template-columns: 1fr;
+  }
 }

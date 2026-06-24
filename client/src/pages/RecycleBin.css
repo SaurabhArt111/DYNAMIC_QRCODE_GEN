@@ -44,6 +44,38 @@
   color: var(--muted);
 }
 
+.recycle-row-skeleton strong,
+.recycle-row-skeleton span {
+  display: block;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--surface-2), #fff, var(--surface-2));
+  background-size: 220% 100%;
+  animation: recycleSkeleton 1.2s ease-in-out infinite;
+}
+
+.recycle-row-skeleton strong {
+  width: 180px;
+  height: 18px;
+}
+
+.recycle-row-skeleton div:first-child span {
+  width: 260px;
+  height: 13px;
+}
+
+.recycle-row-skeleton .button-row span {
+  width: 96px;
+  height: 40px;
+  margin-top: 0;
+  border-radius: 8px;
+}
+
+@keyframes recycleSkeleton {
+  to {
+    background-position: -220% 0;
+  }
+}
+
 @media (max-width: 650px) {
   .recycle-row {
     align-items: stretch;
