@@ -33,10 +33,7 @@ export default function Landing() {
             <span>{appName}</span>
           </div>
           <div className="landing-actions">
-            <Link className="primary-button" to={routes.dashboard}>
-              Open Control Center
-              <ArrowRight size={18} />
-            </Link>
+            
           </div>
         </header>
 
