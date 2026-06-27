@@ -167,7 +167,7 @@ a {
 }
 
 .icon-button {
-  width: 40px;
+  min-width: 40px;
   padding: 0;
   background: var(--surface-2);
   border-color: var(--border);

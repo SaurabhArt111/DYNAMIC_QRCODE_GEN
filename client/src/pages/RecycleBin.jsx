@@ -167,13 +167,13 @@ export default function RecycleBin() {
               onChange={(e) => setQuery((current) => ({ ...current, search: e.target.value }))}
             />
           </label>
-          <select value={query.type} onChange={(e) => setQuery((current) => ({ ...current, type: e.target.value }))}>
+          <select className="secondary-button" value={query.type} onChange={(e) => setQuery((current) => ({ ...current, type: e.target.value }))}>
             <option value="all">All items</option>
             <option value="collection">Collections</option>
             <option value="qr">QR codes</option>
             <option value="upload">Files</option>
           </select>
-          <select value={query.sort} onChange={(e) => setQuery((current) => ({ ...current, sort: e.target.value }))}>
+          <select className="secondary-button" value={query.sort} onChange={(e) => setQuery((current) => ({ ...current, sort: e.target.value }))}>
             <option value="newest">Newest deleted</option>
             <option value="oldest">Oldest deleted</option>
             <option value="name">Name</option>

@@ -102,6 +102,13 @@
   display: block;
 }
 
+.recycle-item-copy strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
 .recycle-row span {
   margin-top: 4px;
   color: var(--muted);
