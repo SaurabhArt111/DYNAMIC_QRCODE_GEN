@@ -103,10 +103,11 @@
 }
 
 .recycle-item-copy strong {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--primary);
-  margin-bottom: 4px;
+  color: var(--primary-dark);
+}
+
+.recycle-item-copy span b {
+  color: var(--text);
 }
 
 .recycle-row span {

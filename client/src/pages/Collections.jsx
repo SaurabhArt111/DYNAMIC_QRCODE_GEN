@@ -143,7 +143,7 @@ export default function Collections() {
               <button className="icon-button danger" title="Delete" onClick={() => deleteCollection(col)}><Trash2 size={16} /></button>
               <button
                 className="icon-button"
-                title="Download QR Images"
+                title="Download QR Images Zip"
                 onClick={() => downloadCollectionZip(col)}
                 disabled={busy === 'zip'}
               >

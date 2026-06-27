@@ -224,7 +224,7 @@ export default function RecycleBin() {
             </button>
             <div className="recycle-item-copy">
               <strong>{itemName(entry)}</strong>
-              <span>{itemLabel(entry)} - Deleted {formatDate(entry.deletedAt)}</span>
+              <span><b>{itemLabel(entry)}</b> - Deleted {formatDate(entry.deletedAt)}</span>
             </div>
             <div className="button-row">
               <button className="secondary-button" onClick={() => restore(entry._id)} disabled={busy === `restore-${entry._id}`}>
