@@ -8,7 +8,7 @@
   position: sticky;
   top: 0;
   height: 100vh;
-  background: #4A141B;
+  background: var(--primary);
   color: #f8fafc;
   display: flex;
   flex-direction: column;
@@ -43,7 +43,7 @@
 .sidebar a.active,
 .sidebar a:hover,
 .logout-button:hover {
-  background: #2a0b10;
+  background: var(--primary-dark);
   color: #fff;
 }
 
@@ -92,7 +92,7 @@
     align-items: center;
     justify-content: space-around;
 
-    background: #4A141B;
+    background: var(--primary);
 
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 
