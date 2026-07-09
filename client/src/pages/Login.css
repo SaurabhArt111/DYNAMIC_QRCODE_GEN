@@ -7,8 +7,8 @@
   padding-top: calc(24px + var(--safe-top));
   padding-bottom: calc(24px + var(--safe-bottom));
   background:
-    radial-gradient(900px 500px at 15% 15%, rgba(var(--primary-rgb), 0.35), transparent 60%),
-    radial-gradient(900px 600px at 85% 85%, rgba(var(--primary-rgb), 0.22), transparent 60%),
+    /* radial-gradient(900px 500px at 15% 15%, rgba(var(--primary-rgb), 0.35), transparent 60%), */
+    /* radial-gradient(900px 600px at 85% 85%, rgba(var(--primary-rgb), 0.22), transparent 60%), */
     linear-gradient(150deg, #10201e, #1f2937 60%, var(--bg) 60%);
 }
 
