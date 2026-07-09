@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { AlertTriangle, Download, ExternalLink, Maximize } from 'lucide-react';
-import { api, fileUrl } from '../api/http.js';
+import { AlertTriangle, Download, ExternalLink, Maximize, WifiOff } from 'lucide-react';
+import { api, fileUrl, getErrorMessage } from '../api/http.js';
 import { formatBytes } from '../utils/format.js';
 import './Viewer.css';
 
@@ -23,7 +23,7 @@ export default function Viewer() {
     setVault(null);
 
     api
-      .get(`/vault/${token}`)
+      .get(`/vault/${token}`, { __silent: true })
       .then((res) => {
         if (!mounted) return;
         if (res.data.status === 'deleted' || res.data.status === 'inactive') {
@@ -37,6 +37,7 @@ export default function Viewer() {
       .catch((err) => {
         if (!mounted) return;
         setStatus(err.response?.status === 404 ? 'missing' : 'error');
+        setMessage(getErrorMessage(err, 'Please check your connection and try scanning again.'));
       });
 
     return () => {
@@ -153,9 +154,9 @@ export default function Viewer() {
     return (
       <main className="viewer-page viewer-status-page">
         <section className="viewer-status-card">
-          <AlertTriangle size={42} />
+          {typeof navigator !== 'undefined' && !navigator.onLine ? <WifiOff size={42} /> : <AlertTriangle size={42} />}
           <h1>Unable To Open QR</h1>
-          <p>Please check your connection and try scanning again.</p>
+          <p>{message || 'Please check your connection and try scanning again.'}</p>
         </section>
       </main>
     );

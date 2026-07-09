@@ -76,14 +76,22 @@
 }
 
 .landing-feature {
+  position: relative;
   display: grid;
   gap: 12px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(74, 20, 27, 0.12);
-  border-radius: 8px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 16px 38px rgba(23, 32, 42, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 45%),
+    rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-md, 14px);
+  box-shadow: 0 16px 38px rgba(23, 32, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 0 0 1px rgba(74, 20, 27, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-feature:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 48px rgba(23, 32, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 0 0 1px rgba(74, 20, 27, 0.08);
 }
 
 .landing-feature svg {

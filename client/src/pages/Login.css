@@ -1,18 +1,40 @@
 .login-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 24px;
-  background: linear-gradient(140deg, #10201e, #1f2937 52%, #f6f7f4 52%);
+  padding-top: calc(24px + var(--safe-top));
+  padding-bottom: calc(24px + var(--safe-bottom));
+  background:
+    radial-gradient(900px 500px at 15% 15%, rgba(var(--primary-rgb), 0.35), transparent 60%),
+    radial-gradient(900px 600px at 85% 85%, rgba(var(--primary-rgb), 0.22), transparent 60%),
+    linear-gradient(150deg, #10201e, #1f2937 60%, var(--bg) 60%);
 }
 
 .login-panel {
+  position: relative;
   width: min(430px, 100%);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 28px;
-  box-shadow: var(--shadow);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 35%),
+    rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius-lg);
+  padding: 32px 28px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  animation: login-in 0.4s ease;
+}
+
+@keyframes login-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .login-brand {
@@ -25,6 +47,7 @@
 
 .login-panel h1 {
   margin: 24px 0 8px;
+  letter-spacing: -0.01em;
 }
 
 .login-panel p {
@@ -44,4 +67,11 @@
   justify-content: center;
   gap: 6px;
   font-size: 0.85rem;
+}
+
+@media (max-width: 480px) {
+  .login-panel {
+    padding: 26px 20px;
+    border-radius: var(--radius-md);
+  }
 }
