@@ -12,8 +12,13 @@
 }
 
 @keyframes backdrop-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-panel {
@@ -22,10 +27,9 @@
   max-height: 90dvh;
   overflow-x: hidden;
   overflow-y: auto;
-
   position: relative;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0) 30%),
     var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);

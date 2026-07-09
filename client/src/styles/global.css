@@ -183,13 +183,6 @@ a {
   }
 }
 
-/* ----------------------------------------
-   Glass surface system (no backdrop-filter)
-   Layered translucency + gradient sheen +
-   inset highlight to fake a "glass" look
-   that still renders well on low-power
-   devices and browsers without blur support.
----------------------------------------- */
 .page-section,
 .surface-panel {
   position: relative;

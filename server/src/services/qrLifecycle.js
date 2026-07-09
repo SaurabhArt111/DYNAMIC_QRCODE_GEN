@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Collection } from '../models/Collection.js';
 import { QRCode } from '../models/QRCode.js';
 import { Upload } from '../models/Upload.js';
@@ -9,6 +10,15 @@ import { removeUploadFile } from '../utils/storage.js';
 export function normalizeFileSize(file) {
   const size = Number(file?.size ?? file?.sizeBytes ?? 0);
   return Number.isFinite(size) && size >= 0 ? size : 0;
+}
+
+export function normalizeQrId(qrId) {
+  if (!qrId) return null;
+  if (qrId instanceof mongoose.Types.ObjectId) return qrId;
+  if (typeof qrId === 'string' && /^[a-f\d]{24}$/i.test(qrId)) {
+    return new mongoose.Types.ObjectId(qrId);
+  }
+  return qrId;
 }
 
 export function buildUploadDoc(file, qrId, order = 0) {
@@ -25,11 +35,12 @@ export function buildUploadDoc(file, qrId, order = 0) {
 }
 
 export async function recalculateQrSize(qrId) {
+  const normalizedQrId = normalizeQrId(qrId);
   const result = await Upload.aggregate([
-    { $match: { qrCode: qrId, status: { $ne: 'deleted' } } },
+    { $match: { qrCode: normalizedQrId, status: { $ne: 'deleted' } } },
     { $group: { _id: '$qrCode', bytes: { $sum: '$sizeBytes' } } }
   ]);
-  await QRCode.findByIdAndUpdate(qrId, { sizeBytes: result[0]?.bytes || 0 });
+  await QRCode.findByIdAndUpdate(normalizedQrId, { sizeBytes: result[0]?.bytes || 0 });
 }
 
 export async function moveQrToRecycle(qrId, adminId, options = {}) {

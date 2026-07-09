@@ -283,9 +283,10 @@ router.post('/bulk-create-2/associated', requireAuth, qrUpload.array('files', 50
       continue;
     }
 
-    const qrId = String(qr._id);
-    const order = nextOrderByQr.get(qrId) || 0;
-    nextOrderByQr.set(qrId, order + 1);
+    const qrId = qr._id;
+    const qrKey = String(qrId);
+    const order = nextOrderByQr.get(qrKey) || 0;
+    nextOrderByQr.set(qrKey, order + 1);
     matchedQrIds.add(qrId);
     uploadDocs.push({
       ...buildUploadDoc(file, qr._id, order)
