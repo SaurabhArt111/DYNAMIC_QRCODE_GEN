@@ -5,10 +5,6 @@
   --bg-grad-1: #eef2ee;
   --bg-grad-2: #f7f4ee;
 
-  /* --surface / --surface-2 are intentionally translucent (not solid white).
-     Every page's cards already use `background: var(--surface)`, so tinting
-     these two tokens gives the whole app a consistent glass look without
-     backdrop-filter/blur and without touching each page's CSS. */
   --surface: rgba(255, 255, 255, 0.72);
   --surface-2: rgba(238, 245, 243, 0.65);
 
@@ -121,6 +117,7 @@ select {
 button {
   cursor: pointer;
   -webkit-appearance: none;
+  appearance: none;
 }
 
 button:disabled,
@@ -504,6 +501,7 @@ a {
 }
 
 @media (max-width: 480px) {
+
   .primary-button,
   .secondary-button,
   .danger-button {

@@ -15,10 +15,9 @@
   padding: 18px;
   padding-top: calc(18px + var(--safe-top));
   padding-left: calc(18px + var(--safe-left));
-
   color: #f8fafc;
   background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 40%),
     linear-gradient(200deg, var(--primary), var(--primary-dark));
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08), 8px 0 32px rgba(0, 0, 0, 0.12);
 }
