@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import multer from 'multer';
 import QRCodeImage from 'qrcode';
 import { requireAuth } from '../middleware/auth.js';
 import { qrUpload, handleUploadErrors } from '../middleware/upload.js';
@@ -7,15 +8,36 @@ import { QRCode } from '../models/QRCode.js';
 import { Upload } from '../models/Upload.js';
 import { Collection } from '../models/Collection.js';
 import { RecycleBin } from '../models/RecycleBin.js';
+import { pickDesignFields } from '../models/designSchema.js';
 import { createVaultToken } from '../utils/tokens.js';
 import { getFileCategory } from '../utils/fileTypes.js';
 import { logActivity } from '../utils/activity.js';
-import { removeUploadFile } from '../utils/storage.js';
+import { removeUploadFile, uploadRoot } from '../utils/storage.js';
 import { env } from '../config/env.js';
 import { asyncRouter } from '../utils/asyncRouter.js';
 import { buildUploadDoc, moveQrToRecycle, recalculateQrSize } from '../services/qrLifecycle.js';
 
 const router = asyncRouter(express.Router());
+
+const logoUpload = multer({
+  storage: multer.diskStorage({
+    destination: uploadRoot,
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `qrlogo-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+    }
+  }),
+  limits: { files: 1, fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = file.mimetype.startsWith('image/');
+    cb(ok ? null : new Error('Only image files can be used as a QR logo.'), ok);
+  }
+});
+
+function handleLogoUploadError(err, req, res, next) {
+  if (!err) return next();
+  res.status(400).json({ message: err.message || 'Logo upload failed.' });
+}
 
 function vaultUrl(token) {
   return `${env.publicBaseUrl}/vault/${token}`;
@@ -26,6 +48,7 @@ function mapQr(qr) {
     ...qr,
     collectionId: qr.collection?._id || qr.collection || null,
     collectionName: qr.collection?.name || null,
+    collectionDesign: qr.collection?.design || null,
     vaultUrl: vaultUrl(qr.token)
   };
 }
@@ -78,7 +101,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   const [items, total] = await Promise.all([
     QRCode.find(query)
-      .populate('collection', 'name')
+      .populate('collection', 'name design')
       .sort(sorts[filter] || sorts.new)
       .skip((page - 1) * limit)
       .limit(limit)
@@ -315,20 +338,24 @@ router.get('/:id', requireAuth, async (req, res) => {
   const uploads = await Upload.find({ qrCode: qr._id, status: { $ne: 'deleted' } }).sort({ order: 1 }).lean();
 
   let collectionPdf = null;
+  let collectionDesign = null;
   if (qr.collection) {
     const col = await Collection.findOne({ _id: qr.collection, status: { $ne: 'deleted' } }).lean();
-    if (col && col.defaultPdf) {
-      collectionPdf = {
-        collectionId: col._id,
-        collectionName: col.name,
-        originalName: col.defaultPdf.originalName,
-        sizeBytes: col.defaultPdf.sizeBytes,
-        mimeType: col.defaultPdf.mimeType
-      };
+    if (col) {
+      collectionDesign = col.design || null;
+      if (col.defaultPdf) {
+        collectionPdf = {
+          collectionId: col._id,
+          collectionName: col.name,
+          originalName: col.defaultPdf.originalName,
+          sizeBytes: col.defaultPdf.sizeBytes,
+          mimeType: col.defaultPdf.mimeType
+        };
+      }
     }
   }
 
-  res.json({ qr: mapQr(qr), uploads, collectionPdf });
+  res.json({ qr: mapQr(qr), uploads, collectionPdf, collectionDesign });
 });
 
 router.put('/:id', requireAuth, async (req, res) => {
@@ -418,6 +445,83 @@ router.get('/:id/qr-image', requireAuth, async (req, res) => {
   res.setHeader('Content-Type', 'image/png');
   res.setHeader('Content-Disposition', `attachment; filename="${qr.name.replace(/[^a-z0-9]/gi, '-')}.png"`);
   res.send(png);
+});
+
+// ---- Design QR Code -------------------------------------------------------
+// A QR can either inherit its collection's default design, or opt into its
+// own custom look. Saving a design here always marks the QR as customized;
+// resetting reverts it back to following the collection (or the plain
+// built-in default if it has no collection).
+
+router.put('/:id/design', requireAuth, async (req, res) => {
+  const qr = await QRCode.findById(req.params.id);
+  if (!qr || qr.status === 'deleted') return res.status(404).json({ message: 'QR not found.' });
+
+  const fields = pickDesignFields(req.body || {});
+  qr.design = { ...(qr.design ? qr.design.toObject() : {}), ...fields };
+  qr.useCustomDesign = true;
+  await qr.save();
+  await logActivity('QR_MODIFIED', qr._id, `QR design updated: ${qr.name}`);
+  res.json(mapQr(qr.toObject()));
+});
+
+router.delete('/:id/design', requireAuth, async (req, res) => {
+  const qr = await QRCode.findById(req.params.id);
+  if (!qr || qr.status === 'deleted') return res.status(404).json({ message: 'QR not found.' });
+
+  qr.useCustomDesign = false;
+  await qr.save();
+  await logActivity('QR_MODIFIED', qr._id, `QR design reset to collection default: ${qr.name}`);
+  res.json(mapQr(qr.toObject()));
+});
+
+router.post('/:id/design/logo', requireAuth, logoUpload.single('logo'), handleLogoUploadError, async (req, res) => {
+  const qr = await QRCode.findById(req.params.id);
+  if (!qr || qr.status === 'deleted') {
+    if (req.file) await removeUploadFile(req.file.path).catch(() => {});
+    return res.status(404).json({ message: 'QR not found.' });
+  }
+  if (!req.file) return res.status(400).json({ message: 'No logo file uploaded.' });
+
+  const previousLogo = qr.design?.logo;
+  qr.design = {
+    ...(qr.design ? qr.design.toObject() : {}),
+    logo: {
+      originalName: req.file.originalname,
+      storedName: req.file.filename,
+      mimeType: req.file.mimetype,
+      sizeBytes: req.file.size,
+      path: req.file.path
+    }
+  };
+  qr.useCustomDesign = true;
+  await qr.save();
+  if (previousLogo?.path) await removeUploadFile(previousLogo.path).catch(() => {});
+
+  res.status(201).json(mapQr(qr.toObject()));
+});
+
+router.delete('/:id/design/logo', requireAuth, async (req, res) => {
+  const qr = await QRCode.findById(req.params.id);
+  if (!qr || qr.status === 'deleted') return res.status(404).json({ message: 'QR not found.' });
+
+  const previousLogo = qr.design?.logo;
+  if (previousLogo?.path) await removeUploadFile(previousLogo.path).catch(() => {});
+  const nextDesign = { ...(qr.design ? qr.design.toObject() : {}) };
+  delete nextDesign.logo;
+  qr.design = nextDesign;
+  await qr.save();
+  res.json(mapQr(qr.toObject()));
+});
+
+router.get('/:id/design/logo', requireAuth, async (req, res) => {
+  const qr = await QRCode.findById(req.params.id).lean();
+  if (!qr || !qr.design?.logo?.path) return res.status(404).json({ message: 'No logo set for this QR.' });
+  res.setHeader('Content-Type', qr.design.logo.mimeType || 'image/png');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.sendFile(path.resolve(qr.design.logo.path), (err) => {
+    if (err && !res.headersSent) res.status(404).json({ message: 'Logo file missing.' });
+  });
 });
 
 router.post('/:id/recycle', requireAuth, async (req, res) => {

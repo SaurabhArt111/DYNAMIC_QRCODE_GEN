@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowDown, ArrowLeft, ArrowUp, Copy, Download, ExternalLink, FileText, GripVertical, RefreshCw, Save, Trash2, UploadCloud, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, Copy, Download, ExternalLink, FileText, GripVertical, Palette, RefreshCw, Save, Trash2, UploadCloud, X } from 'lucide-react';
 import { api, fileUrl } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
+import QRCanvas from '../components/QRCanvas.jsx';
+import QRDesignStudio from '../components/QRDesignStudio.jsx';
+import { resolveDesignAndLogoUrl } from '../utils/designHelpers.js';
+import { downloadSingleQrPng } from '../utils/qrExport.js';
 import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './QRDetail.css';
@@ -18,6 +22,7 @@ export default function QRDetail() {
   const [uploadingFiles, setUploadingFiles] = useState([]);
   const [busyAction, setBusyAction] = useState('');
   const [dragIndex, setDragIndex] = useState(null);
+  const [showDesignStudio, setShowDesignStudio] = useState(false);
   const queuedFiles = useMemo(() => selectedFiles.filter(Boolean), [selectedFiles]);
 
   async function load() {
@@ -97,11 +102,8 @@ export default function QRDetail() {
   async function downloadQr() {
     setBusyAction('download');
     try {
-      const res = await api.get(`/qrcodes/${id}/qr-image`, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data);
-      const link = document.createElement('a');
-      link.href = url; link.download = `${data.qr.name}.png`; link.click();
-      URL.revokeObjectURL(url);
+      const { design, logoPath } = resolveDesignAndLogoUrl(qr, data.collectionDesign);
+      await downloadSingleQrPng({ vaultUrl: qr.vaultUrl, design, logoPath, filenameBase: qr.name });
     } finally { setBusyAction(''); }
   }
 
@@ -133,9 +135,10 @@ export default function QRDetail() {
     );
   }
 
-  const { qr, uploads, collectionPdf } = data;
+  const { qr, uploads, collectionPdf, collectionDesign } = data;
   const parentCollectionId = collectionPdf?.collectionId || qr.collectionId || null;
   const backTarget = parentCollectionId ? routes.collection(parentCollectionId) : routes.qrcodes;
+  const { design: effectiveDesign, logoPath: effectiveLogoPath } = resolveDesignAndLogoUrl(qr, collectionDesign);
 
   return (
     <section className="page">
@@ -151,6 +154,7 @@ export default function QRDetail() {
         <div className="button-row">
           <button className="secondary-button" onClick={() => navigator.clipboard.writeText(qr.vaultUrl)}><Copy size={18} /> Copy URL</button>
           <a className="secondary-button" href={qr.vaultUrl.replace(import.meta.env.VITE_PUBLIC_BASE_URL || 'http://localhost:5000', '')} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Open</a>
+          <button className="secondary-button" onClick={() => setShowDesignStudio(true)}><Palette size={18} /> Design QR Code</button>
           <button className="primary-button" onClick={downloadQr} disabled={busyAction === 'download'}><Download size={18} /> {busyAction === 'download' ? 'Preparing...' : 'QR PNG'}</button>
           <button className="danger-button" onClick={recycle} disabled={busyAction === 'recycle'}><Trash2 size={18} /> Recycle</button>
         </div>
@@ -164,6 +168,13 @@ export default function QRDetail() {
           <button className="primary-button" disabled={busyAction === 'save'}><Save size={18} /> {busyAction === 'save' ? 'Saving...' : 'Save Changes'}</button>
         </form>
         <aside className="detail-panel">
+          <h2>QR Preview</h2>
+          <div className="qr-detail-preview">
+            <QRCanvas data={qr.vaultUrl} design={effectiveDesign} logoPath={effectiveLogoPath} qrPixelSize={280} />
+          </div>
+          <p className="qr-detail-design-tag">
+            {qr.useCustomDesign ? 'Custom design' : (parentCollectionId ? "Using this collection's design" : 'Default design')}
+          </p>
           <h2>QR Metadata</h2>
           <dl className="meta-list">
             <div><dt>Created</dt><dd>{formatDate(qr.createdAt)}</dd></div>
@@ -272,6 +283,16 @@ export default function QRDetail() {
           {modalError.map((line) => <p key={line}>{line}</p>)}
           <button className="primary-button" onClick={() => setModalError(null)}>OK</button>
         </Modal>
+      )}
+
+      {showDesignStudio && (
+        <QRDesignStudio
+          scope="qr"
+          qr={qr}
+          collection={{ name: qr.collectionName, design: collectionDesign }}
+          onClose={() => setShowDesignStudio(false)}
+          onSaved={load}
+        />
       )}
     </section>
   );

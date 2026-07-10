@@ -15,6 +15,38 @@
   color: var(--primary);
 }
 
+.qr-collection-design-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+.qr-collection-design-hint svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.qr-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qr-card-thumb {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px;
+  display: grid;
+  place-items: center;
+}
+
 .collection-stat-row {
   display: flex;
   gap: 10px;

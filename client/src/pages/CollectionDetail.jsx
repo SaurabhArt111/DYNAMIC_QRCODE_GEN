@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft, Plus, Download, Trash, Search, FolderUp, FileText, CheckCircle2, XCircle, Loader, HardDrive, QrCode
+  ArrowLeft, Plus, Download, FileDown, Trash, Search, FolderUp, FileText, CheckCircle2, XCircle, Loader, HardDrive, QrCode, Palette
 } from 'lucide-react';
-import { api } from '../api/http.js';
+import { api, getErrorMessage } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
+import QRCanvas from '../components/QRCanvas.jsx';
+import QRDesignStudio from '../components/QRDesignStudio.jsx';
+import { loadAuthenticatedImage, resolveDesignAndLogoUrl } from '../utils/designHelpers.js';
+import { resolveEffectiveDesign } from '../utils/qrEngine.js';
+import { downloadSingleQrPng, downloadCollectionZip, downloadCollectionPdf } from '../utils/qrExport.js';
 import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './CollectionDetail.css';
@@ -21,6 +26,9 @@ export default function CollectionDetail() {
   const [form, setForm] = useState({ name: '', description: '' });
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [showCollectionDesignStudio, setShowCollectionDesignStudio] = useState(false);
+  const [designingQr, setDesigningQr] = useState(null);
+  const [collectionLogoObjectUrl, setCollectionLogoObjectUrl] = useState(null);
 
   // Bulk folder state
   const [bulkFolders, setBulkFolders] = useState([]); // [{name, files:[]}]
@@ -54,6 +62,40 @@ export default function CollectionDetail() {
 
   useEffect(() => { load(); }, [id]);
 
+  // Fetch the collection's design logo once and reuse the resulting blob URL
+  // across every card thumbnail, instead of each card re-fetching it.
+  useEffect(() => {
+    let cancelled = false;
+    let revoke = () => {};
+
+    async function run() {
+      if (!col?.design?.logo) { setCollectionLogoObjectUrl(null); return; }
+      try {
+        const { image, revoke: revokeFn } = await loadAuthenticatedImage(`/collections/${id}/design/logo`);
+        revoke = revokeFn;
+        if (!cancelled) setCollectionLogoObjectUrl(image?.src || null);
+      } catch {
+        if (!cancelled) setCollectionLogoObjectUrl(null);
+      }
+    }
+
+    run();
+    return () => { cancelled = true; revoke(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, col?.design?.logo?.storedName]);
+
+  function resolveCardDesign(qr) {
+    const useCustom = !!qr.useCustomDesign;
+    const design = resolveEffectiveDesign(col?.design, qr.design, useCustom);
+    let logoPath = null;
+    if (useCustom) {
+      if (qr.design?.logo) logoPath = `/qrcodes/${qr._id}/design/logo`;
+    } else if (col?.design?.logo) {
+      logoPath = collectionLogoObjectUrl || `/collections/${id}/design/logo`;
+    }
+    return { design, logoPath };
+  }
+
   async function createQr(e) {
     e.preventDefault();
     setBusy('create');
@@ -81,27 +123,40 @@ export default function CollectionDetail() {
   async function downloadQrImage(qr) {
     setBusy(`dl-${qr._id}`);
     try {
-      const res = await api.get(`/qrcodes/${qr._id}/qr-image`, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data);
-      const a = document.createElement('a');
-      a.href = url; a.download = `${qr.name}.png`; a.click();
-      URL.revokeObjectURL(url);
+      const { design, logoPath } = resolveCardDesign(qr);
+      await downloadSingleQrPng({ vaultUrl: qr.vaultUrl, design, logoPath, filenameBase: qr.name });
     } finally { setBusy(''); }
   }
 
-  async function downloadCollectionZip() {
+  async function handleDownloadZip() {
     setBusy('zip');
     setError('');
     try {
-      const res = await api.get(`/collections/${id}/qr-images.zip`, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${col?.name || 'collection'}-qr-images.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadCollectionZip({
+        qrs: qrItems,
+        design: resolveEffectiveDesign(col?.design, null, false),
+        logoPath: col?.design?.logo ? `/collections/${id}/design/logo` : null,
+        collectionName: col?.name
+      });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to download QR images.');
+      setError(getErrorMessage(err, 'Failed to download QR images.'));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function handleDownloadPdf() {
+    setBusy('pdf');
+    setError('');
+    try {
+      await downloadCollectionPdf({
+        qrs: qrItems,
+        design: resolveEffectiveDesign(col?.design, null, false),
+        logoPath: col?.design?.logo ? `/collections/${id}/design/logo` : null,
+        collectionName: col?.name
+      });
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to build the PDF.'));
     } finally {
       setBusy('');
     }
@@ -275,8 +330,14 @@ export default function CollectionDetail() {
           )}
         </div>
         <div className="button-row">
-          <button className="secondary-button" onClick={downloadCollectionZip} disabled={busy === 'zip' || loading || !qrItems.length}>
+          <button className="secondary-button" onClick={() => setShowCollectionDesignStudio(true)} disabled={loading}>
+            <Palette size={18} /> Design Frame
+          </button>
+          <button className="secondary-button" onClick={handleDownloadZip} disabled={busy === 'zip' || loading || !qrItems.length}>
             {busy === 'zip' ? <span className="spinner small-spinner" /> : <Download size={18} />} ZIP
+          </button>
+          <button className="secondary-button" onClick={handleDownloadPdf} disabled={busy === 'pdf' || loading || !qrItems.length}>
+            {busy === 'pdf' ? <span className="spinner small-spinner" /> : <FileDown size={18} />} PDF
           </button>
           <button className="secondary-button" onClick={() => { setModal('bulk'); setBulkResults(null); setBulkFolders([]); setBulkParentName(''); setBulkSkippedFiles(0); }}>
             <FolderUp size={18} /> Bulk Create
@@ -289,6 +350,10 @@ export default function CollectionDetail() {
           </button>
         </div>
       </div>
+
+      <p className="qr-collection-design-hint">
+        <Palette size={13} /> ZIP and PDF downloads always use this collection's design, so every QR code in the export looks consistent.
+      </p>
 
       <div className="qr-toolbar">
         {error && <div className="error-box">{error}</div>}
@@ -312,29 +377,40 @@ export default function CollectionDetail() {
         {loading && Array.from({ length: 4 }).map((_, i) => (
           <article className="qr-card qr-card-skeleton" key={i}><span /><p /><dl><div /><div /><div /></dl></article>
         ))}
-        {!loading && qrItems.map((qr) => (
-          <article className="qr-card" key={qr._id}>
-            <div>
-              <strong>{qr.name}</strong>
-              <span>{qr.token}</span>
-            </div>
-            <p>{qr.description || 'No description'}</p>
-            <dl>
-              <div><dt>Size</dt><dd>{formatBytes(qr.sizeBytes)}</dd></div>
-              <div><dt>Status</dt><dd>{qr.status}</dd></div>
-              <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
-            </dl>
-            <div className="button-row">
-              <Link className="primary-button" to={routes.qrcode(qr._id)}>Manage</Link>
-              <button className="icon-button" title="Download QR" onClick={() => downloadQrImage(qr)} disabled={busy === `dl-${qr._id}`}>
-                {busy === `dl-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
-              </button>
-              <button className="icon-button danger" title="Recycle" onClick={() => recycleQr(qr._id)}>
-                <Trash size={18} />
-              </button>
-            </div>
-          </article>
-        ))}
+        {!loading && qrItems.map((qr) => {
+          const { design: cardDesign, logoPath: cardLogoPath } = resolveCardDesign(qr);
+          return (
+            <article className="qr-card" key={qr._id}>
+              <div className="qr-card-head">
+                <div className="qr-card-thumb">
+                  <QRCanvas data={qr.vaultUrl} design={cardDesign} logoPath={cardLogoPath} qrPixelSize={140} />
+                </div>
+                <div>
+                  <strong>{qr.name}</strong>
+                  <span>{qr.token}</span>
+                </div>
+              </div>
+              <p>{qr.description || 'No description'}</p>
+              <dl>
+                <div><dt>Size</dt><dd>{formatBytes(qr.sizeBytes)}</dd></div>
+                <div><dt>Status</dt><dd>{qr.status}</dd></div>
+                <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
+              </dl>
+              <div className="button-row">
+                <Link className="primary-button" to={routes.qrcode(qr._id)}>Manage</Link>
+                <button className="icon-button" title="Design this QR" onClick={() => setDesigningQr(qr)}>
+                  <Palette size={18} />
+                </button>
+                <button className="icon-button" title="Download QR" onClick={() => downloadQrImage(qr)} disabled={busy === `dl-${qr._id}`}>
+                  {busy === `dl-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
+                </button>
+                <button className="icon-button danger" title="Recycle" onClick={() => recycleQr(qr._id)}>
+                  <Trash size={18} />
+                </button>
+              </div>
+            </article>
+          );
+        })}
         {!loading && !qrItems.length && (
           <div className="qr-empty">No QR codes in this collection yet.</div>
         )}
@@ -576,6 +652,24 @@ export default function CollectionDetail() {
             )}
           </div>
         </Modal>
+      )}
+      {showCollectionDesignStudio && (
+        <QRDesignStudio
+          scope="collection"
+          collection={col}
+          onClose={() => setShowCollectionDesignStudio(false)}
+          onSaved={load}
+        />
+      )}
+
+      {designingQr && (
+        <QRDesignStudio
+          scope="qr"
+          qr={designingQr}
+          collection={col}
+          onClose={() => setDesigningQr(null)}
+          onSaved={load}
+        />
       )}
     </section>
   );

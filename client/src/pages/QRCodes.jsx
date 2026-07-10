@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Download, Plus, Search, Trash } from 'lucide-react';
+import { Download, Palette, Plus, Search, Trash } from 'lucide-react';
 import { api } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
+import QRCanvas from '../components/QRCanvas.jsx';
+import QRDesignStudio from '../components/QRDesignStudio.jsx';
+import { resolveDesignAndLogoUrl } from '../utils/designHelpers.js';
+import { downloadSingleQrPng } from '../utils/qrExport.js';
 import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './QRCodes.css';
@@ -15,6 +19,7 @@ export default function QRCodes() {
   const [form, setForm] = useState({ name: '', description: '' });
   const [loading, setLoading] = useState(true);
   const [busyAction, setBusyAction] = useState('');
+  const [designingQr, setDesigningQr] = useState(null);
 
   async function recycleQr(qrId) {
     try {
@@ -55,11 +60,8 @@ export default function QRCodes() {
   async function downloadQr(qr) {
     setBusyAction(`download-${qr._id}`);
     try {
-      const res = await api.get(`/qrcodes/${qr._id}/qr-image`, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data);
-      const link = document.createElement('a');
-      link.href = url; link.download = `${qr.name}.png`; link.click();
-      URL.revokeObjectURL(url);
+      const { design, logoPath } = resolveDesignAndLogoUrl(qr, qr.collectionDesign);
+      await downloadSingleQrPng({ vaultUrl: qr.vaultUrl, design, logoPath, filenameBase: qr.name });
     } finally {
       setBusyAction('');
     }
@@ -103,30 +105,41 @@ export default function QRCodes() {
             <span /><p /><dl><div /><div /><div /></dl>
           </article>
         ))}
-        {!loading && items.map((qr) => (
-          <article className="qr-card" key={qr._id}>
-            <div>
-              <strong>{qr.name}</strong>
-              <span>{qr.token}</span>
-            </div>
-            <p>{qr.description || 'No description'}</p>
-            <dl>
-              <div><dt>Size</dt><dd>{formatBytes(qr.sizeBytes)}</dd></div>
-              <div><dt>Status</dt><dd>{qr.status}</dd></div>
-              <div><dt>Collection</dt><dd>{qr.collectionName || 'Standalone'}</dd></div>
-              <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
-            </dl>
-            <div className="button-row">
-              <Link className="primary-button" to={routes.qrcode(qr._id)}>Manage</Link>
-              <button className="icon-button" title="Download QR" onClick={() => downloadQr(qr)} disabled={busyAction === `download-${qr._id}`}>
-                {busyAction === `download-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
-              </button>
-              <button className="icon-button" title="Recycle QR" onClick={() => {
-                if (window.confirm('Recycle this QR?')) recycleQr(qr._id);
-              }}><Trash size={18} style={{ color: 'red' }} /></button>
-            </div>
-          </article>
-        ))}
+        {!loading && items.map((qr) => {
+          const { design: cardDesign, logoPath: cardLogoPath } = resolveDesignAndLogoUrl(qr, qr.collectionDesign);
+          return (
+            <article className="qr-card" key={qr._id}>
+              <div className="qr-card-head">
+                <div className="qr-card-thumb">
+                  <QRCanvas data={qr.vaultUrl} design={cardDesign} logoPath={cardLogoPath} qrPixelSize={140} />
+                </div>
+                <div>
+                  <strong>{qr.name}</strong>
+                  <span>{qr.token}</span>
+                </div>
+              </div>
+              <p>{qr.description || 'No description'}</p>
+              <dl>
+                <div><dt>Size</dt><dd>{formatBytes(qr.sizeBytes)}</dd></div>
+                <div><dt>Status</dt><dd>{qr.status}</dd></div>
+                <div><dt>Collection</dt><dd>{qr.collectionName || 'Standalone'}</dd></div>
+                <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
+              </dl>
+              <div className="button-row">
+                <Link className="primary-button" to={routes.qrcode(qr._id)}>Manage</Link>
+                <button className="icon-button" title="Design this QR" onClick={() => setDesigningQr(qr)}>
+                  <Palette size={18} />
+                </button>
+                <button className="icon-button" title="Download QR" onClick={() => downloadQr(qr)} disabled={busyAction === `download-${qr._id}`}>
+                  {busyAction === `download-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
+                </button>
+                <button className="icon-button" title="Recycle QR" onClick={() => {
+                  if (window.confirm('Recycle this QR?')) recycleQr(qr._id);
+                }}><Trash size={18} style={{ color: 'red' }} /></button>
+              </div>
+            </article>
+          );
+        })}
         {!loading && !items.length && <div className="qr-empty">No QR codes found.</div>}
       </div>
       {modal === 'create' && (
@@ -137,6 +150,16 @@ export default function QRCodes() {
             <button className="primary-button" disabled={busyAction === 'create'}>{busyAction === 'create' ? 'Creating...' : 'Create'}</button>
           </form>
         </Modal>
+      )}
+
+      {designingQr && (
+        <QRDesignStudio
+          scope="qr"
+          qr={designingQr}
+          collection={{ name: designingQr.collectionName, design: designingQr.collectionDesign }}
+          onClose={() => setDesigningQr(null)}
+          onSaved={load}
+        />
       )}
     </section>
   );

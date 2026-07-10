@@ -17,6 +17,27 @@
   font-size: 1.05rem;
 }
 
+.qr-detail-preview {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: grid;
+  place-items: center;
+}
+
+.qr-detail-design-tag {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0 0 20px;
+}
+
 .meta-list,
 .meta-list div {
   display: grid;

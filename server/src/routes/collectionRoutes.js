@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { Collection } from '../models/Collection.js';
 import { QRCode } from '../models/QRCode.js';
 import { RecycleBin } from '../models/RecycleBin.js';
+import { pickDesignFields } from '../models/designSchema.js';
 import { uploadRoot, removeUploadFile } from '../utils/storage.js';
 import { logActivity } from '../utils/activity.js';
 import { env } from '../config/env.js';
@@ -30,6 +31,26 @@ const pdfUpload = multer({
 function handlePdfError(err, req, res, next) {
   if (!err) return next();
   res.status(400).json({ message: err.message || 'File upload error.' });
+}
+
+const logoUpload = multer({
+  storage: multer.diskStorage({
+    destination: uploadRoot,
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `collogo-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+    }
+  }),
+  limits: { files: 1, fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = file.mimetype.startsWith('image/');
+    cb(ok ? null : new Error('Only image files can be used as a QR logo.'), ok);
+  }
+});
+
+function handleLogoUploadError(err, req, res, next) {
+  if (!err) return next();
+  res.status(400).json({ message: err.message || 'Logo upload failed.' });
 }
 
 function vaultUrl(token) {
@@ -216,7 +237,7 @@ router.get('/:id/qrcodes', requireAuth, async (req, res) => {
   ]);
 
   res.json({
-    items,
+    items: items.map((item) => ({ ...item, vaultUrl: vaultUrl(item.token), collectionId: col._id })),
     total,
     page,
     pages: Math.ceil(total / limit),
@@ -252,6 +273,70 @@ router.get('/:id/qr-images.zip', requireAuth, async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
   res.setHeader('Content-Length', zip.length);
   res.send(zip);
+});
+
+// ---- Design QR Code (collection default) -----------------------------
+// This is the frame/pattern/color/logo applied to every QR in the
+// collection that hasn't been customized individually. Bulk ZIP/PDF
+// exports always render every QR with this design, so a whole batch stays
+// visually consistent no matter what individual QRs are set to.
+
+router.put('/:id/design', requireAuth, async (req, res) => {
+  const col = await Collection.findById(req.params.id);
+  if (!col || col.status === 'deleted') return res.status(404).json({ message: 'Collection not found.' });
+
+  const fields = pickDesignFields(req.body || {});
+  col.design = { ...(col.design ? col.design.toObject() : {}), ...fields };
+  await col.save();
+  res.json({ collection: col.toObject() });
+});
+
+router.post('/:id/design/logo', requireAuth, logoUpload.single('logo'), handleLogoUploadError, async (req, res) => {
+  const col = await Collection.findById(req.params.id);
+  if (!col || col.status === 'deleted') {
+    if (req.file) await removeUploadFile(req.file.path).catch(() => {});
+    return res.status(404).json({ message: 'Collection not found.' });
+  }
+  if (!req.file) return res.status(400).json({ message: 'No logo file uploaded.' });
+
+  const previousLogo = col.design?.logo;
+  col.design = {
+    ...(col.design ? col.design.toObject() : {}),
+    logo: {
+      originalName: req.file.originalname,
+      storedName: req.file.filename,
+      mimeType: req.file.mimetype,
+      sizeBytes: req.file.size,
+      path: req.file.path
+    }
+  };
+  await col.save();
+  if (previousLogo?.path) await removeUploadFile(previousLogo.path).catch(() => {});
+
+  res.status(201).json({ collection: col.toObject() });
+});
+
+router.delete('/:id/design/logo', requireAuth, async (req, res) => {
+  const col = await Collection.findById(req.params.id);
+  if (!col || col.status === 'deleted') return res.status(404).json({ message: 'Collection not found.' });
+
+  const previousLogo = col.design?.logo;
+  if (previousLogo?.path) await removeUploadFile(previousLogo.path).catch(() => {});
+  const nextDesign = { ...(col.design ? col.design.toObject() : {}) };
+  delete nextDesign.logo;
+  col.design = nextDesign;
+  await col.save();
+  res.json({ collection: col.toObject() });
+});
+
+router.get('/:id/design/logo', requireAuth, async (req, res) => {
+  const col = await Collection.findById(req.params.id).lean();
+  if (!col || !col.design?.logo?.path) return res.status(404).json({ message: 'No logo set for this collection.' });
+  res.setHeader('Content-Type', col.design.logo.mimeType || 'image/png');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.sendFile(path.resolve(col.design.logo.path), (err) => {
+    if (err && !res.headersSent) res.status(404).json({ message: 'Logo file missing.' });
+  });
 });
 
 export default router;
