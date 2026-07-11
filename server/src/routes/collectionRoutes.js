@@ -53,6 +53,26 @@ function handleLogoUploadError(err, req, res, next) {
   res.status(400).json({ message: err.message || 'Logo upload failed.' });
 }
 
+const frameImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: uploadRoot,
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `colframe-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+    }
+  }),
+  limits: { files: 1, fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = file.mimetype.startsWith('image/');
+    cb(ok ? null : new Error('Only image files can be used as a custom frame.'), ok);
+  }
+});
+
+function handleFrameImageUploadError(err, req, res, next) {
+  if (!err) return next();
+  res.status(400).json({ message: err.message || 'Frame image upload failed.' });
+}
+
 function vaultUrl(token) {
   return `${env.publicBaseUrl}/vault/${token}`;
 }
@@ -336,6 +356,56 @@ router.get('/:id/design/logo', requireAuth, async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.sendFile(path.resolve(col.design.logo.path), (err) => {
     if (err && !res.headersSent) res.status(404).json({ message: 'Logo file missing.' });
+  });
+});
+
+router.post('/:id/design/frame-image', requireAuth, frameImageUpload.single('frameImage'), handleFrameImageUploadError, async (req, res) => {
+  const col = await Collection.findById(req.params.id);
+  if (!col || col.status === 'deleted') {
+    if (req.file) await removeUploadFile(req.file.path).catch(() => {});
+    return res.status(404).json({ message: 'Collection not found.' });
+  }
+  if (!req.file) return res.status(400).json({ message: 'No frame image uploaded.' });
+
+  const previousFrameImage = col.design?.frameImage;
+  col.design = {
+    ...(col.design ? col.design.toObject() : {}),
+    frameStyle: 'custom-image',
+    frameImage: {
+      originalName: req.file.originalname,
+      storedName: req.file.filename,
+      mimeType: req.file.mimetype,
+      sizeBytes: req.file.size,
+      path: req.file.path
+    }
+  };
+  await col.save();
+  if (previousFrameImage?.path) await removeUploadFile(previousFrameImage.path).catch(() => {});
+
+  res.status(201).json({ collection: col.toObject() });
+});
+
+router.delete('/:id/design/frame-image', requireAuth, async (req, res) => {
+  const col = await Collection.findById(req.params.id);
+  if (!col || col.status === 'deleted') return res.status(404).json({ message: 'Collection not found.' });
+
+  const previousFrameImage = col.design?.frameImage;
+  if (previousFrameImage?.path) await removeUploadFile(previousFrameImage.path).catch(() => {});
+  const nextDesign = { ...(col.design ? col.design.toObject() : {}) };
+  delete nextDesign.frameImage;
+  if (nextDesign.frameStyle === 'custom-image') nextDesign.frameStyle = 'none';
+  col.design = nextDesign;
+  await col.save();
+  res.json({ collection: col.toObject() });
+});
+
+router.get('/:id/design/frame-image', requireAuth, async (req, res) => {
+  const col = await Collection.findById(req.params.id).lean();
+  if (!col || !col.design?.frameImage?.path) return res.status(404).json({ message: 'No custom frame set for this collection.' });
+  res.setHeader('Content-Type', col.design.frameImage.mimeType || 'image/png');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.sendFile(path.resolve(col.design.frameImage.path), (err) => {
+    if (err && !res.headersSent) res.status(404).json({ message: 'Frame image file missing.' });
   });
 });
 

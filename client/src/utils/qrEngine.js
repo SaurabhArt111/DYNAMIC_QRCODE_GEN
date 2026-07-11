@@ -48,6 +48,11 @@ export const FRAME_STYLES = [
 // Frame styles that show an editable caption ("SCAN ME!").
 export const FRAME_STYLES_WITH_TEXT = new Set(['bottom-bar', 'bottom-pill', 'top-bar', 'circle-badge', 'phone']);
 
+export const FRAME_TEXT_MODES = [
+  { id: 'custom', label: 'Custom text' },
+  { id: 'qrName', label: "Use each QR's name" }
+];
+
 export const COLOR_SWATCHES = [
   '#17202A', '#FFFFFF', '#D92D20', '#F79009', '#0F8A5F', '#1D6FA5', '#7A5AF8', '#2970FF', '#DD2590'
 ];
@@ -61,10 +66,26 @@ export const DEFAULT_DESIGN = Object.freeze({
   logoSize: 0.22,
   hideBackgroundDots: true,
   frameStyle: 'none',
+  frameTextMode: 'custom',
   frameText: 'SCAN ME!',
   frameColor: '#0F8A5F',
-  frameTextColor: '#FFFFFF'
+  frameTextColor: '#FFFFFF',
+  frameImageScale: 0.55,
+  frameImageOffsetY: 0
 });
+
+/**
+ * Resolves what caption a frame should show: either the fixed custom text,
+ * or (when frameTextMode is 'qrName') the QR's own name — most useful for
+ * collection-wide bulk exports where every QR should be captioned with its
+ * own title rather than one repeated static label.
+ */
+export function resolveFrameCaption(design, qrName) {
+  if (design.frameTextMode === 'qrName' && qrName) {
+    return String(qrName).toUpperCase().slice(0, 40);
+  }
+  return String(design.frameText || 'SCAN ME!').toUpperCase().slice(0, 40);
+}
 
 /**
  * Merges a collection's default design with an individual QR's own design.
@@ -295,7 +316,7 @@ export function drawLogo(ctx, logoImg, canvasSize, design) {
 // Frames
 // ---------------------------------------------------------------------------
 
-export function computeFrameLayout(frameStyle, qrSize) {
+export function computeFrameLayout(frameStyle, qrSize, design = {}, frameImageEl = null) {
   const pad = Math.round(qrSize * 0.07);
 
   switch (frameStyle) {
@@ -324,6 +345,28 @@ export function computeFrameLayout(frameStyle, qrSize) {
     }
     case 'card-border': {
       return { frameStyle, canvasWidth: qrSize + pad * 2, canvasHeight: qrSize + pad * 2, qrX: pad, qrY: pad, qrSize, pad };
+    }
+    case 'custom-image': {
+      if (!frameImageEl) {
+        // No image loaded (yet, or upload failed) — fall back to a plain QR
+        // rather than showing nothing.
+        return { frameStyle: 'none', canvasWidth: qrSize, canvasHeight: qrSize, qrX: 0, qrY: 0, qrSize };
+      }
+      const iw = frameImageEl.naturalWidth || frameImageEl.width || qrSize;
+      const ih = frameImageEl.naturalHeight || frameImageEl.height || qrSize;
+      const scale = Math.min(Math.max(design.frameImageScale ?? 0.55, 0.2), 0.9);
+      const offsetY = Math.min(Math.max(design.frameImageOffsetY ?? 0, -0.35), 0.35);
+      const innerQrSize = Math.min(iw, ih) * scale;
+      const centerY = ih / 2 + offsetY * ih;
+      return {
+        frameStyle,
+        canvasWidth: iw,
+        canvasHeight: ih,
+        qrX: iw / 2 - innerQrSize / 2,
+        qrY: centerY - innerQrSize / 2,
+        qrSize: innerQrSize,
+        frameImageEl
+      };
     }
     case 'none':
     default:
@@ -367,6 +410,11 @@ export function drawFrameBackdrop(ctx, frameStyle, layout, design) {
       roundRectPath(ctx, layout.bezel * 0.5, layout.bezel * 0.5, w - layout.bezel, h - layout.bezel, Math.round(qrSize * 0.1));
       ctx.fill();
       break;
+    case 'custom-image':
+      if (layout.frameImageEl) {
+        ctx.drawImage(layout.frameImageEl, 0, 0, w, h);
+      }
+      break;
     case 'none':
     default:
       break;
@@ -374,9 +422,9 @@ export function drawFrameBackdrop(ctx, frameStyle, layout, design) {
 }
 
 // Drawn *after* the QR is pasted in (labels, notches, borders).
-export function drawFrameOverlay(ctx, frameStyle, layout, design) {
+export function drawFrameOverlay(ctx, frameStyle, layout, design, qrName = '') {
   const { canvasWidth: w, qrSize } = layout;
-  const text = (design.frameText || 'SCAN ME!').toUpperCase();
+  const text = resolveFrameCaption(design, qrName);
   const frameColor = design.frameColor || '#0F8A5F';
   const textColor = design.frameTextColor || '#FFFFFF';
 
@@ -431,6 +479,10 @@ export function drawFrameOverlay(ctx, frameStyle, layout, design) {
       ctx.stroke();
       break;
     }
+    case 'custom-image':
+      // The uploaded image already contains all of its own chrome/caption —
+      // nothing to draw on top.
+      break;
     case 'none':
     default:
       break;
@@ -457,8 +509,11 @@ export function loadImage(url) {
  * `data` is the URL/text encoded by the QR. `design` is a design object
  * (merge collection + QR overrides beforehand via resolveEffectiveDesign).
  * `logoImageEl` is an already-loaded HTMLImageElement, or null.
+ * `frameImageEl` is an already-loaded custom frame image, used when
+ * `design.frameStyle === 'custom-image'`.
+ * `qrName` is used as the caption when `design.frameTextMode === 'qrName'`.
  */
-export async function renderQrCanvas({ data, design, logoImageEl = null, qrPixelSize = 640 }) {
+export async function renderQrCanvas({ data, design, logoImageEl = null, frameImageEl = null, qrName = '', qrPixelSize = 640 }) {
   const finalDesign = { ...DEFAULT_DESIGN, ...design };
   const matrix = getQrMatrix(data);
 
@@ -469,14 +524,14 @@ export async function renderQrCanvas({ data, design, logoImageEl = null, qrPixel
   drawStyledQr(qctx, matrix, finalDesign, qrPixelSize);
   if (logoImageEl) drawLogo(qctx, logoImageEl, qrPixelSize, finalDesign);
 
-  const layout = computeFrameLayout(finalDesign.frameStyle, qrPixelSize);
+  const layout = computeFrameLayout(finalDesign.frameStyle, qrPixelSize, finalDesign, frameImageEl);
   const finalCanvas = document.createElement('canvas');
   finalCanvas.width = layout.canvasWidth;
   finalCanvas.height = layout.canvasHeight;
   const fctx = finalCanvas.getContext('2d');
-  drawFrameBackdrop(fctx, finalDesign.frameStyle, layout, finalDesign);
+  drawFrameBackdrop(fctx, layout.frameStyle, layout, finalDesign);
   fctx.drawImage(qrCanvas, layout.qrX, layout.qrY, layout.qrSize, layout.qrSize);
-  drawFrameOverlay(fctx, finalDesign.frameStyle, layout, finalDesign);
+  drawFrameOverlay(fctx, layout.frameStyle, layout, finalDesign, qrName);
 
   return finalCanvas;
 }

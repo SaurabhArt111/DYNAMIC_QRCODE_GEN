@@ -21,17 +21,25 @@ import { errorHandler, notFound } from './middleware/notFound.js';
 const app = express();
 const nodeEnv = process.env.NODE_ENV || 'development';
 const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+const viewerUrl = env.viewerUrl || 'http://localhost:5174';
 const isBehindProxy = nodeEnv === 'production' || process.env.RENDER === 'true' || Boolean(process.env.RENDER_EXTERNAL_URL);
-const frameAncestors = ["'self'", clientUrl, env.clientUrl, env.publicBaseUrl]
+
+function toOrigin(url) {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return url;
+  }
+}
+
+// The admin dashboard and the public viewer are two separate deployed apps
+// (different origins), so both need to be allowed to call this API.
+const allowedOrigins = [clientUrl, viewerUrl, env.clientUrl, env.publicBaseUrl]
   .filter(Boolean)
-  .map((url) => {
-    try {
-      return new URL(url).origin;
-    } catch {
-      return url;
-    }
-  })
+  .map(toOrigin)
   .filter((url, index, list) => list.indexOf(url) === index);
+
+const frameAncestors = ["'self'", ...allowedOrigins];
 
 if (isBehindProxy) {
   app.set('trust proxy', 1);
@@ -46,7 +54,15 @@ app.use(helmet({
   }
 }));
 app.use(compression());
-app.use(cors({ origin: `${nodeEnv === 'development' ? 'http://localhost:5173' : (clientUrl || 'http://localhost:5173')}`, credentials: true }));
+app.use(cors({
+  origin(origin, callback) {
+    // Same-origin / non-browser requests (curl, server-to-server) send no
+    // Origin header at all — allow those through.
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 700, standardHeaders: true, legacyHeaders: false }));
 
@@ -60,7 +76,7 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/vault/:token', (req, res) => {
-  res.redirect(302, `${nodeEnv === 'development' ? 'http://localhost:5173' : (clientUrl || 'http://localhost:5173')}/vault/${req.params.token}`);
+  res.redirect(302, `${viewerUrl}/vault/${req.params.token}`);
 });
 
 app.use('/api/auth', authRoutes);

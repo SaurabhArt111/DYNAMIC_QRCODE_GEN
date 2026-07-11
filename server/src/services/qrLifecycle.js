@@ -145,8 +145,9 @@ export async function purgeQrCascade(qrId) {
   await RecycleBin.deleteMany({ itemType: 'upload', upload: { $in: uploads.map((upload) => upload._id) } });
   await Upload.deleteMany({ qrCode: qrId });
   await RecycleBin.deleteOne({ itemType: 'qr', qrCode: qrId });
-  const qr = await QRCode.findById(qrId).select('design.logo').lean();
+  const qr = await QRCode.findById(qrId).select('design.logo design.frameImage').lean();
   if (qr?.design?.logo?.path) await removeUploadFile(qr.design.logo.path).catch(() => {});
+  if (qr?.design?.frameImage?.path) await removeUploadFile(qr.design.frameImage.path).catch(() => {});
   await QRCode.deleteOne({ _id: qrId });
 }
 
@@ -161,6 +162,9 @@ export async function purgeCollectionCascade(entry) {
   }
   if (entry.collection.design?.logo?.path) {
     await removeUploadFile(entry.collection.design.logo.path).catch(() => {});
+  }
+  if (entry.collection.design?.frameImage?.path) {
+    await removeUploadFile(entry.collection.design.frameImage.path).catch(() => {});
   }
 
   await RecycleBin.deleteMany({ itemType: 'qr', qrCode: { $in: qrs.map((qr) => qr._id) } });

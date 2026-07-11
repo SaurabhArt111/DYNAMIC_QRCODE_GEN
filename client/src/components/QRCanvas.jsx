@@ -10,7 +10,7 @@ import './QRCanvas.css';
  * looks like", shared by the design studio, the QR detail page, and the
  * collection grid thumbnails.
  */
-export default function QRCanvas({ data, design, logoPath, qrPixelSize = 320, className = '' }) {
+export default function QRCanvas({ data, design, logoPath, frameImagePath, qrName = '', qrPixelSize = 320, className = '' }) {
   const canvasRef = useRef(null);
   const [error, setError] = useState('');
   const designKey = JSON.stringify(design || {});
@@ -18,18 +18,25 @@ export default function QRCanvas({ data, design, logoPath, qrPixelSize = 320, cl
   useEffect(() => {
     let cancelled = false;
     let revokeLogo = () => {};
+    let revokeFrame = () => {};
 
     async function run() {
       setError('');
       try {
-        const { image, revoke } = await loadAuthenticatedImage(logoPath);
+        const [{ image, revoke }, { image: frameImage, revoke: revokeFrameFn }] = await Promise.all([
+          loadAuthenticatedImage(logoPath),
+          loadAuthenticatedImage(frameImagePath)
+        ]);
         revokeLogo = revoke;
-        if (cancelled) { revoke(); return; }
+        revokeFrame = revokeFrameFn;
+        if (cancelled) { revoke(); revokeFrameFn(); return; }
 
         const rendered = await renderQrCanvas({
           data: data || ' ',
           design,
           logoImageEl: image,
+          frameImageEl: frameImage,
+          qrName,
           qrPixelSize
         });
         if (cancelled) return;
@@ -47,9 +54,9 @@ export default function QRCanvas({ data, design, logoPath, qrPixelSize = 320, cl
     }
 
     run();
-    return () => { cancelled = true; revokeLogo(); };
+    return () => { cancelled = true; revokeLogo(); revokeFrame(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, designKey, logoPath, qrPixelSize]);
+  }, [data, designKey, logoPath, frameImagePath, qrName, qrPixelSize]);
 
   return (
     <div className={`qr-canvas-frame ${className}`}>

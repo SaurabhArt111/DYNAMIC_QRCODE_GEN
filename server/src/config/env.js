@@ -9,6 +9,10 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET || 'development-only-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  // The standalone public viewer app (what a "SCAN ME" QR actually opens on
+  // a visitor's phone) is deployed separately from the admin dashboard so
+  // scanning a code doesn't download the whole admin bundle.
+  viewerUrl: process.env.VIEWER_URL || 'http://localhost:5174',
   publicBaseUrl: process.env.PUBLIC_BASE_URL || 'http://localhost:5000',
   adminEmail: process.env.ADMIN_EMAIL || 'admin@dynamicvault.local',
   adminPassword: process.env.ADMIN_PASSWORD || 'ChangeMe123!',

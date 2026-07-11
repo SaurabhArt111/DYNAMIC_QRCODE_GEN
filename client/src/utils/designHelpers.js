@@ -7,25 +7,30 @@ import { resolveEffectiveDesign } from './qrEngine.js';
 
 /**
  * Determines the design that should actually be rendered for a QR code, plus
- * the API path (if any) for its logo image.
+ * the API paths (if any) for its logo and custom frame image.
  *
- * - If the QR has opted into a custom design and that design has its own
- *   logo, the QR's own logo endpoint is used.
- * - Otherwise, if the collection has a default logo, that one is used.
+ * - If the QR has opted into a custom design, only ITS OWN logo/frame image
+ *   are used (never silently inherited from the collection) — an empty
+ *   custom design means "no logo/frame", not "whatever the collection has".
+ * - Otherwise, the collection's default logo/frame image are used.
  */
 export function resolveDesignAndLogoUrl(qr, collectionDesign) {
   const useCustom = !!qr?.useCustomDesign;
   const design = resolveEffectiveDesign(collectionDesign, qr?.design, useCustom);
+  const collectionId = qr?.collectionId || qr?.collection;
 
   let logoPath = null;
+  let frameImagePath = null;
+
   if (useCustom) {
     if (qr?.design?.logo) logoPath = `/qrcodes/${qr._id}/design/logo`;
-  } else if (collectionDesign?.logo) {
-    const collectionId = qr?.collectionId || qr?.collection;
-    if (collectionId) logoPath = `/collections/${collectionId}/design/logo`;
+    if (qr?.design?.frameImage) frameImagePath = `/qrcodes/${qr._id}/design/frame-image`;
+  } else {
+    if (collectionDesign?.logo && collectionId) logoPath = `/collections/${collectionId}/design/logo`;
+    if (collectionDesign?.frameImage && collectionId) frameImagePath = `/collections/${collectionId}/design/frame-image`;
   }
 
-  return { design, logoPath };
+  return { design, logoPath, frameImagePath };
 }
 
 /**
@@ -36,30 +41,40 @@ export function resolveDesignAndLogoUrl(qr, collectionDesign) {
  * `path` may either be a server API path (e.g. "/qrcodes/:id/design/logo",
  * fetched with the auth header) or an already-usable URL such as a local
  * "blob:" URL from a freshly-picked file — those are loaded directly.
+ *
+ * This never throws: a missing file (404, deleted upload, network hiccup)
+ * simply resolves with `image: null` so callers can render "no logo"
+ * instead of crashing.
  */
 export async function loadAuthenticatedImage(path) {
   if (!path) return { image: null, revoke: () => {} };
 
-  const isDirectlyUsableUrl = /^(blob:|data:|https?:)/i.test(path);
-  if (isDirectlyUsableUrl) {
+  try {
+    const isDirectlyUsableUrl = /^(blob:|data:|https?:)/i.test(path);
+    if (isDirectlyUsableUrl) {
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Could not load image.'));
+        img.src = path;
+      });
+      return { image, revoke: () => {} };
+    }
+
+    const res = await api.get(path, { responseType: 'blob', __silent: true });
+    const objectUrl = URL.createObjectURL(res.data);
     const image = await new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Could not load logo image.'));
-      img.src = path;
+      img.onerror = () => reject(new Error('Could not load image.'));
+      img.src = objectUrl;
     });
-    return { image, revoke: () => {} };
+    return { image, revoke: () => URL.revokeObjectURL(objectUrl) };
+  } catch {
+    // Missing/failed image (e.g. the file was lost on the server, or a
+    // stale reference) — treat as "no image" rather than a hard failure.
+    return { image: null, revoke: () => {} };
   }
-
-  const res = await api.get(path, { responseType: 'blob', __silent: true });
-  const objectUrl = URL.createObjectURL(res.data);
-  const image = await new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Could not load logo image.'));
-    img.src = objectUrl;
-  });
-  return { image, revoke: () => URL.revokeObjectURL(objectUrl) };
 }
 
 export function triggerBlobDownload(blob, filename) {

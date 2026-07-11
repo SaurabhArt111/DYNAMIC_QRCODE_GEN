@@ -22,7 +22,6 @@ import QRCodes from './pages/QRCodes.jsx';
 import QRDetail from './pages/QRDetail.jsx';
 import RecycleBin from './pages/RecycleBin.jsx';
 import Settings from './pages/Settings.jsx';
-import Viewer from './pages/Viewer.jsx';
 import NotFound from './pages/NotFound.jsx';
 import { routes } from './routes/paths.js';
 
@@ -57,10 +56,6 @@ const router = createBrowserRouter(
           <Login />
         </PublicOnlyRoute>
       )
-    },
-    {
-      path: routes.viewer(),
-      element: <Viewer />
     },
     {
       path: routes.adminRoot,

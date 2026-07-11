@@ -1,0 +1,112 @@
+:root {
+  color-scheme: light;
+
+  --bg-grad-1: #eef2ee;
+  --bg-grad-2: #f7f4ee;
+
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-strong: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-blur: blur(20px) saturate(160%);
+
+  --text: #17202a;
+  --muted: #65717c;
+  --border: rgba(23, 32, 42, 0.13);
+
+  --primary: #4A141B;
+  --primary-dark: #2a0b10;
+  --primary-rgb: 74, 20, 27;
+  --danger: #b42318;
+  --success: #0f8a5f;
+
+  --shadow-glass: 0 12px 36px rgba(23, 32, 42, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  font-family: "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(1000px 560px at 90% -10%, rgba(var(--primary-rgb), 0.16), transparent 60%),
+    radial-gradient(800px 480px at -10% 110%, rgba(var(--primary-rgb), 0.12), transparent 60%),
+    linear-gradient(160deg, var(--bg-grad-1), var(--bg-grad-2));
+  background-attachment: fixed;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, a {
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(var(--primary-rgb), 0.55);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid rgba(var(--primary-rgb), 0.18);
+  border-top-color: var(--primary);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(160deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.94rem;
+  box-shadow: 0 10px 26px rgba(var(--primary-rgb), 0.3);
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--text);
+  box-shadow: var(--shadow-glass);
+  flex-shrink: 0;
+}

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Download, Palette, Plus, Search, Trash } from 'lucide-react';
-import { api } from '../api/http.js';
+import { api, getErrorMessage } from '../api/http.js';
+import { useToast } from '../context/ToastContext.jsx';
 import Modal from '../components/Modal.jsx';
 import QRCanvas from '../components/QRCanvas.jsx';
 import QRDesignStudio from '../components/QRDesignStudio.jsx';
@@ -12,8 +13,10 @@ import { formatBytes, formatDate } from '../utils/format.js';
 import './QRCodes.css';
 
 export default function QRCodes() {
+  const toast = useToast();
   const [items, setItems] = useState([]);
-  const [query, setQuery] = useState({ search: '', filter: 'new' });
+  const [query, setQuery] = useState({ search: '', filter: 'new', page: 1 });
+  const [pageInfo, setPageInfo] = useState({ total: 0, pages: 1 });
   const [modal, setModal] = useState(null);
   const [error, setError] = useState('');
   const [form, setForm] = useState({ name: '', description: '' });
@@ -33,14 +36,28 @@ export default function QRCodes() {
   async function load() {
     setLoading(true);
     try {
-      const { data } = await api.get('/qrcodes', { params: query });
+      const { data } = await api.get('/qrcodes', {
+        params: { search: query.search, filter: query.filter, page: query.page, limit: 24 }
+      });
       setItems(data.items);
+      setPageInfo({ total: data.total, pages: data.pages || 1 });
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { load(); }, [query.filter]);
+  useEffect(() => { load(); }, [query.filter, query.page]);
+
+  function runSearch() {
+    setQuery((current) => (current.page === 1 ? { ...current } : { ...current, page: 1 }));
+    // If we were already on page 1, the effect above won't re-fire on its
+    // own since `page` didn't change — trigger the search directly.
+    if (query.page === 1) load();
+  }
+
+  function goToPage(nextPage) {
+    setQuery((current) => ({ ...current, page: Math.min(Math.max(nextPage, 1), pageInfo.pages || 1) }));
+  }
 
   async function createQr(event) {
     event.preventDefault();
@@ -60,8 +77,10 @@ export default function QRCodes() {
   async function downloadQr(qr) {
     setBusyAction(`download-${qr._id}`);
     try {
-      const { design, logoPath } = resolveDesignAndLogoUrl(qr, qr.collectionDesign);
-      await downloadSingleQrPng({ vaultUrl: qr.vaultUrl, design, logoPath, filenameBase: qr.name });
+      const { design, logoPath, frameImagePath } = resolveDesignAndLogoUrl(qr, qr.collectionDesign);
+      await downloadSingleQrPng({ vaultUrl: qr.vaultUrl, design, logoPath, frameImagePath, qrName: qr.name, filenameBase: qr.name });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to download the QR image.'));
     } finally {
       setBusyAction('');
     }
@@ -86,10 +105,10 @@ export default function QRCodes() {
             placeholder="Search by QR name or ID"
             value={query.search}
             onChange={(e) => setQuery({ ...query, search: e.target.value })}
-            onKeyDown={(e) => e.key === 'Enter' && load()}
+            onKeyDown={(e) => e.key === 'Enter' && runSearch()}
           />
         </div>
-        <select value={query.filter} onChange={(e) => setQuery({ ...query, filter: e.target.value })}>
+        <select value={query.filter} onChange={(e) => setQuery({ ...query, filter: e.target.value, page: 1 })}>
           <option value="active">Active</option>
           <option value="new">New First</option>
           <option value="old">Old First</option>
@@ -97,7 +116,7 @@ export default function QRCodes() {
           <option value="za">From Z to A</option>
           <option value="edited">Last Edit</option>
         </select>
-        <button className="secondary-button" onClick={load} disabled={loading}><Search size={18} /> {loading ? 'Searching...' : 'Search'}</button>
+        <button className="secondary-button" onClick={runSearch} disabled={loading}><Search size={18} /> {loading ? 'Searching...' : 'Search'}</button>
       </div>
       <div className="qr-grid">
         {loading && Array.from({ length: 6 }).map((_, index) => (
@@ -106,12 +125,12 @@ export default function QRCodes() {
           </article>
         ))}
         {!loading && items.map((qr) => {
-          const { design: cardDesign, logoPath: cardLogoPath } = resolveDesignAndLogoUrl(qr, qr.collectionDesign);
+          const { design: cardDesign, logoPath: cardLogoPath, frameImagePath: cardFrameImagePath } = resolveDesignAndLogoUrl(qr, qr.collectionDesign);
           return (
             <article className="qr-card" key={qr._id}>
               <div className="qr-card-head">
                 <div className="qr-card-thumb">
-                  <QRCanvas data={qr.vaultUrl} design={cardDesign} logoPath={cardLogoPath} qrPixelSize={140} />
+                  <QRCanvas data={qr.vaultUrl} design={cardDesign} logoPath={cardLogoPath} frameImagePath={cardFrameImagePath} qrName={qr.name} qrPixelSize={140} />
                 </div>
                 <div>
                   <strong>{qr.name}</strong>
@@ -142,6 +161,18 @@ export default function QRCodes() {
         })}
         {!loading && !items.length && <div className="qr-empty">No QR codes found.</div>}
       </div>
+
+      {!loading && pageInfo.total > 0 && (
+        <div className="qr-pagination">
+          <span className="qr-pagination-summary">
+            {pageInfo.total} QR code{pageInfo.total === 1 ? '' : 's'} &middot; Page {query.page} of {pageInfo.pages}
+          </span>
+          <div className="qr-pagination-buttons">
+            <button className="secondary-button" onClick={() => goToPage(query.page - 1)} disabled={query.page <= 1}>Previous</button>
+            <button className="secondary-button" onClick={() => goToPage(query.page + 1)} disabled={query.page >= pageInfo.pages}>Next</button>
+          </div>
+        </div>
+      )}
       {modal === 'create' && (
         <Modal title="Create QR" onClose={() => setModal(null)}>
           <form onSubmit={createQr}>

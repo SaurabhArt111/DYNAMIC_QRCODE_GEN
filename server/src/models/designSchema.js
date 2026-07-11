@@ -12,10 +12,26 @@ export const designSchema = new mongoose.Schema(
     logoSize: { type: Number, default: 0.22 },
     hideBackgroundDots: { type: Boolean, default: true },
     frameStyle: { type: String, default: 'none' },
+    // 'custom' uses frameText verbatim; 'qrName' substitutes each QR's own
+    // name at render time (most useful for collection-wide bulk exports,
+    // where every QR should be captioned with its own title).
+    frameTextMode: { type: String, enum: ['custom', 'qrName'], default: 'custom' },
     frameText: { type: String, default: 'SCAN ME!' },
     frameColor: { type: String, default: '#0F8A5F' },
     frameTextColor: { type: String, default: '#FFFFFF' },
+    // How large the QR appears inside an uploaded custom frame image, and a
+    // vertical nudge (as a fraction of the frame's height) for frames whose
+    // cutout isn't perfectly centered.
+    frameImageScale: { type: Number, default: 0.55 },
+    frameImageOffsetY: { type: Number, default: 0 },
     logo: {
+      originalName: String,
+      storedName: String,
+      mimeType: String,
+      sizeBytes: Number,
+      path: String
+    },
+    frameImage: {
       originalName: String,
       storedName: String,
       mimeType: String,
@@ -28,7 +44,8 @@ export const designSchema = new mongoose.Schema(
 
 export const DESIGN_FIELDS = [
   'dotsType', 'cornersSquareType', 'cornersDotType', 'dotsColor', 'backgroundColor',
-  'logoSize', 'hideBackgroundDots', 'frameStyle', 'frameText', 'frameColor', 'frameTextColor'
+  'logoSize', 'hideBackgroundDots', 'frameStyle', 'frameTextMode', 'frameText', 'frameColor', 'frameTextColor',
+  'frameImageScale', 'frameImageOffsetY'
 ];
 
 export function pickDesignFields(body = {}) {
@@ -38,8 +55,16 @@ export function pickDesignFields(body = {}) {
     if (key === 'logoSize') {
       const num = Number(body[key]);
       out[key] = Number.isFinite(num) ? Math.min(Math.max(num, 0.1), 0.35) : 0.22;
+    } else if (key === 'frameImageScale') {
+      const num = Number(body[key]);
+      out[key] = Number.isFinite(num) ? Math.min(Math.max(num, 0.2), 0.9) : 0.55;
+    } else if (key === 'frameImageOffsetY') {
+      const num = Number(body[key]);
+      out[key] = Number.isFinite(num) ? Math.min(Math.max(num, -0.35), 0.35) : 0;
     } else if (key === 'hideBackgroundDots') {
       out[key] = body[key] === true || body[key] === 'true';
+    } else if (key === 'frameTextMode') {
+      out[key] = body[key] === 'qrName' ? 'qrName' : 'custom';
     } else {
       out[key] = String(body[key]).slice(0, 120);
     }

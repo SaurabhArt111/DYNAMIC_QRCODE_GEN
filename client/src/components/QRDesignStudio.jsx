@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Circle, Palette, RotateCcw, Save, Smartphone, Square, Trash2, UploadCloud, X } from 'lucide-react';
+import { Check, Circle, ImagePlus, Palette, RotateCcw, Save, Smartphone, Square, Trash2, UploadCloud, X } from 'lucide-react';
 import Modal from './Modal.jsx';
 import QRCanvas from './QRCanvas.jsx';
 import { api, getErrorMessage } from '../api/http.js';
 import {
-  COLOR_SWATCHES, CORNER_PRESETS, DOT_TYPES, FRAME_STYLES, FRAME_STYLES_WITH_TEXT, resolveEffectiveDesign
+  COLOR_SWATCHES, CORNER_PRESETS, DOT_TYPES, FRAME_STYLES, FRAME_STYLES_WITH_TEXT, FRAME_TEXT_MODES, resolveEffectiveDesign
 } from '../utils/qrEngine.js';
 import { loadAuthenticatedImage, resolveDesignAndLogoUrl } from '../utils/designHelpers.js';
 import './QRDesignStudio.css';
@@ -14,7 +14,7 @@ import './QRDesignStudio.css';
 // used for the one big "your QR" preview on the left).
 const SWATCH_SAMPLE_DATA = 'DESIGN-PREVIEW';
 
-function LogoThumb({ file, path }) {
+function ImageThumb({ file, path, alt = 'Preview' }) {
   const [src, setSrc] = useState(null);
 
   useEffect(() => {
@@ -29,13 +29,9 @@ function LogoThumb({ file, path }) {
         return;
       }
       if (path) {
-        try {
-          const { image, revoke: revokeFn } = await loadAuthenticatedImage(path);
-          revoke = revokeFn;
-          if (!cancelled) setSrc(image?.src || null);
-        } catch {
-          if (!cancelled) setSrc(null);
-        }
+        const { image, revoke: revokeFn } = await loadAuthenticatedImage(path);
+        revoke = revokeFn;
+        if (!cancelled) setSrc(image?.src || null);
         return;
       }
       setSrc(null);
@@ -46,7 +42,7 @@ function LogoThumb({ file, path }) {
   }, [file, path]);
 
   if (!src) return <UploadCloud size={22} />;
-  return <img src={src} alt="Logo preview" />;
+  return <img src={src} alt={alt} />;
 }
 
 function ColorRow({ label, value, onChange }) {
@@ -91,15 +87,24 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
     return collection?.design?.logo ? `/collections/${collection._id}/design/logo` : null;
   }, [isQrScope, qr, collection]);
 
+  const initialFrameImagePath = useMemo(() => {
+    if (isQrScope) return resolveDesignAndLogoUrl(qr, collection?.design).frameImagePath;
+    return collection?.design?.frameImage ? `/collections/${collection._id}/design/frame-image` : null;
+  }, [isQrScope, qr, collection]);
+
   const [design, setDesign] = useState(initialDesign);
   const [activeTab, setActiveTab] = useState('frame');
   const [logoFile, setLogoFile] = useState(null);
   const [removeLogo, setRemoveLogo] = useState(false);
+  const [frameImageFile, setFrameImageFile] = useState(null);
+  const [removeFrameImage, setRemoveFrameImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
+  const frameImageInputRef = useRef(null);
 
+  const previewQrName = isQrScope ? (qr?.name || 'Your QR') : 'Sample Product Name';
   const previewVaultUrl = isQrScope ? qr?.vaultUrl : `${window.location.origin}/vault/sample-qr-code`;
 
   const [localLogoObjectUrl, setLocalLogoObjectUrl] = useState(null);
@@ -110,7 +115,17 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
     return () => URL.revokeObjectURL(url);
   }, [logoFile]);
 
+  const [localFrameImageObjectUrl, setLocalFrameImageObjectUrl] = useState(null);
+  useEffect(() => {
+    if (!frameImageFile) { setLocalFrameImageObjectUrl(null); return undefined; }
+    const url = URL.createObjectURL(frameImageFile);
+    setLocalFrameImageObjectUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [frameImageFile]);
+
   const effectiveLogoPath = removeLogo ? null : (localLogoObjectUrl || initialLogoPath);
+  const effectiveFrameImagePath = removeFrameImage ? null : (localFrameImageObjectUrl || initialFrameImagePath);
+  const hasCustomFrameImage = !!(frameImageFile || (initialFrameImagePath && !removeFrameImage));
 
   function updateDesign(patch) {
     setDesign((prev) => ({ ...prev, ...patch }));
@@ -129,12 +144,27 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
+  function handleFrameImagePick(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setFrameImageFile(file);
+    setRemoveFrameImage(false);
+    updateDesign({ frameStyle: 'custom-image' });
+  }
+
+  function handleRemoveFrameImage() {
+    setFrameImageFile(null);
+    setRemoveFrameImage(true);
+    if (frameImageInputRef.current) frameImageInputRef.current.value = '';
+    if (design.frameStyle === 'custom-image') updateDesign({ frameStyle: 'none' });
+  }
+
   async function handleSave() {
     setSaving(true);
     setError('');
     try {
       const basePath = isQrScope ? `/qrcodes/${qr._id}` : `/collections/${collection._id}`;
-      const { logo, ...designPayload } = design;
+      const { logo, frameImage, ...designPayload } = design;
       await api.put(`${basePath}/design`, designPayload);
 
       if (logoFile) {
@@ -143,6 +173,14 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
         await api.post(`${basePath}/design/logo`, formData);
       } else if (removeLogo) {
         await api.delete(`${basePath}/design/logo`).catch(() => {});
+      }
+
+      if (frameImageFile) {
+        const formData = new FormData();
+        formData.append('frameImage', frameImageFile);
+        await api.post(`${basePath}/design/frame-image`, formData);
+      } else if (removeFrameImage) {
+        await api.delete(`${basePath}/design/frame-image`).catch(() => {});
       }
 
       await onSaved?.();
@@ -192,7 +230,7 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
       <div className="qds-layout">
         <div className="qds-preview">
           <div className="qds-preview-canvas">
-            <QRCanvas data={previewVaultUrl} design={design} logoPath={effectiveLogoPath} qrPixelSize={520} />
+            <QRCanvas data={previewVaultUrl} design={design} logoPath={effectiveLogoPath} frameImagePath={effectiveFrameImagePath} qrName={previewQrName} qrPixelSize={520} />
           </div>
           {showResetOption && (
             <button className="secondary-button qds-reset-button" onClick={handleResetToCollection} disabled={resetting || saving}>
@@ -239,18 +277,94 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
 
                 {FRAME_STYLES_WITH_TEXT.has(design.frameStyle) && (
                   <>
-                    <div className="field">
-                      <label>Caption text</label>
-                      <input
-                        type="text"
-                        maxLength={20}
-                        value={design.frameText || ''}
-                        onChange={(event) => updateDesign({ frameText: event.target.value })}
-                        placeholder="SCAN ME!"
-                      />
+                    <span className="qds-field-label">Caption</span>
+                    <div className="qds-radio-row">
+                      {FRAME_TEXT_MODES.map((mode) => (
+                        <label key={mode.id} className="qds-radio">
+                          <input
+                            type="radio"
+                            name="frameTextMode"
+                            checked={(design.frameTextMode || 'custom') === mode.id}
+                            onChange={() => updateDesign({ frameTextMode: mode.id })}
+                          />
+                          {mode.label}
+                        </label>
+                      ))}
                     </div>
+
+                    {(design.frameTextMode || 'custom') === 'custom' ? (
+                      <div className="field">
+                        <label>Caption text</label>
+                        <input
+                          type="text"
+                          maxLength={20}
+                          value={design.frameText || ''}
+                          onChange={(event) => updateDesign({ frameText: event.target.value })}
+                          placeholder="SCAN ME!"
+                        />
+                      </div>
+                    ) : (
+                      <p className="field-hint">
+                        Each QR will show its own name as the caption — useful for a collection ZIP or
+                        PDF where every code needs its own label.
+                      </p>
+                    )}
                     <ColorRow label="Frame color" value={design.frameColor} onChange={(frameColor) => updateDesign({ frameColor })} />
                     <ColorRow label="Text color" value={design.frameTextColor} onChange={(frameTextColor) => updateDesign({ frameTextColor })} />
+                  </>
+                )}
+
+                <span className="qds-field-label">Or upload your own frame image</span>
+                <p className="field-hint">
+                  Use a fully custom design (a certificate border, branded template, etc). Your QR is
+                  placed centered on top of it.
+                </p>
+                <div className="qds-logo-row">
+                  <div className="qds-logo-preview qds-frame-image-preview">
+                    {removeFrameImage ? <UploadCloud size={22} /> : <ImageThumb file={frameImageFile} path={initialFrameImagePath} alt="Custom frame preview" />}
+                  </div>
+                  <div className="qds-logo-actions">
+                    <button type="button" className="secondary-button" onClick={() => frameImageInputRef.current?.click()}>
+                      <ImagePlus size={16} /> {hasCustomFrameImage ? 'Replace frame' : 'Upload frame image'}
+                    </button>
+                    {hasCustomFrameImage && design.frameStyle !== 'custom-image' && (
+                      <button type="button" className="secondary-button" onClick={() => updateDesign({ frameStyle: 'custom-image' })}>
+                        Use this frame
+                      </button>
+                    )}
+                    {hasCustomFrameImage && (
+                      <button type="button" className="danger-button" onClick={handleRemoveFrameImage}>
+                        <Trash2 size={16} /> Remove
+                      </button>
+                    )}
+                    <input ref={frameImageInputRef} type="file" accept="image/*" hidden onChange={handleFrameImagePick} />
+                  </div>
+                </div>
+
+                {design.frameStyle === 'custom-image' && hasCustomFrameImage && (
+                  <>
+                    <div className="qds-range-field">
+                      <span className="qds-field-label">QR size in frame ({Math.round((design.frameImageScale ?? 0.55) * 100)}%)</span>
+                      <input
+                        type="range"
+                        min="0.2"
+                        max="0.9"
+                        step="0.01"
+                        value={design.frameImageScale ?? 0.55}
+                        onChange={(event) => updateDesign({ frameImageScale: Number(event.target.value) })}
+                      />
+                    </div>
+                    <div className="qds-range-field">
+                      <span className="qds-field-label">Vertical position</span>
+                      <input
+                        type="range"
+                        min="-0.35"
+                        max="0.35"
+                        step="0.01"
+                        value={design.frameImageOffsetY ?? 0}
+                        onChange={(event) => updateDesign({ frameImageOffsetY: Number(event.target.value) })}
+                      />
+                    </div>
                   </>
                 )}
               </div>
@@ -306,7 +420,7 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
                 <span className="qds-field-label">Logo</span>
                 <div className="qds-logo-row">
                   <div className="qds-logo-preview">
-                    {removeLogo ? <UploadCloud size={22} /> : <LogoThumb file={logoFile} path={initialLogoPath} />}
+                    {removeLogo ? <UploadCloud size={22} /> : <ImageThumb file={logoFile} path={initialLogoPath} alt="Logo preview" />}
                   </div>
                   <div className="qds-logo-actions">
                     <button type="button" className="secondary-button" onClick={() => fileInputRef.current?.click()}>

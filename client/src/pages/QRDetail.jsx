@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowDown, ArrowLeft, ArrowUp, Copy, Download, ExternalLink, FileText, GripVertical, Palette, RefreshCw, Save, Trash2, UploadCloud, X } from 'lucide-react';
-import { api, fileUrl } from '../api/http.js';
+import { api, fileUrl, getErrorMessage } from '../api/http.js';
+import { useToast } from '../context/ToastContext.jsx';
 import Modal from '../components/Modal.jsx';
 import QRCanvas from '../components/QRCanvas.jsx';
 import QRDesignStudio from '../components/QRDesignStudio.jsx';
@@ -16,6 +17,7 @@ const emptySlots = () => Array.from({ length: 4 }, () => null);
 export default function QRDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const [data, setData] = useState(null);
   const [modalError, setModalError] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState(emptySlots);
@@ -102,9 +104,13 @@ export default function QRDetail() {
   async function downloadQr() {
     setBusyAction('download');
     try {
-      const { design, logoPath } = resolveDesignAndLogoUrl(qr, data.collectionDesign);
-      await downloadSingleQrPng({ vaultUrl: qr.vaultUrl, design, logoPath, filenameBase: qr.name });
-    } finally { setBusyAction(''); }
+      const { design, logoPath, frameImagePath } = resolveDesignAndLogoUrl(qr, data.collectionDesign);
+      await downloadSingleQrPng({ vaultUrl: qr.vaultUrl, design, logoPath, frameImagePath, qrName: qr.name, filenameBase: qr.name });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to download the QR image.'));
+    } finally {
+      setBusyAction('');
+    }
   }
 
   async function persistOrder(uploadIds, nextUploads) {
@@ -138,7 +144,7 @@ export default function QRDetail() {
   const { qr, uploads, collectionPdf, collectionDesign } = data;
   const parentCollectionId = collectionPdf?.collectionId || qr.collectionId || null;
   const backTarget = parentCollectionId ? routes.collection(parentCollectionId) : routes.qrcodes;
-  const { design: effectiveDesign, logoPath: effectiveLogoPath } = resolveDesignAndLogoUrl(qr, collectionDesign);
+  const { design: effectiveDesign, logoPath: effectiveLogoPath, frameImagePath: effectiveFrameImagePath } = resolveDesignAndLogoUrl(qr, collectionDesign);
 
   return (
     <section className="page">
@@ -153,7 +159,7 @@ export default function QRDetail() {
         </div>
         <div className="button-row">
           <button className="secondary-button" onClick={() => navigator.clipboard.writeText(qr.vaultUrl)}><Copy size={18} /> Copy URL</button>
-          <a className="secondary-button" href={qr.vaultUrl.replace(import.meta.env.VITE_PUBLIC_BASE_URL || 'http://localhost:5000', '')} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Open</a>
+          <a className="secondary-button" href={qr.vaultUrl} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Open</a>
           <button className="secondary-button" onClick={() => setShowDesignStudio(true)}><Palette size={18} /> Design QR Code</button>
           <button className="primary-button" onClick={downloadQr} disabled={busyAction === 'download'}><Download size={18} /> {busyAction === 'download' ? 'Preparing...' : 'QR PNG'}</button>
           <button className="danger-button" onClick={recycle} disabled={busyAction === 'recycle'}><Trash2 size={18} /> Recycle</button>
@@ -170,7 +176,7 @@ export default function QRDetail() {
         <aside className="detail-panel">
           <h2>QR Preview</h2>
           <div className="qr-detail-preview">
-            <QRCanvas data={qr.vaultUrl} design={effectiveDesign} logoPath={effectiveLogoPath} qrPixelSize={280} />
+            <QRCanvas data={qr.vaultUrl} design={effectiveDesign} logoPath={effectiveLogoPath} frameImagePath={effectiveFrameImagePath} qrName={qr.name} qrPixelSize={280} />
           </div>
           <p className="qr-detail-design-tag">
             {qr.useCustomDesign ? 'Custom design' : (parentCollectionId ? "Using this collection's design" : 'Default design')}

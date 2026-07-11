@@ -9,7 +9,7 @@ import QRCanvas from '../components/QRCanvas.jsx';
 import QRDesignStudio from '../components/QRDesignStudio.jsx';
 import { loadAuthenticatedImage, resolveDesignAndLogoUrl } from '../utils/designHelpers.js';
 import { resolveEffectiveDesign } from '../utils/qrEngine.js';
-import { downloadSingleQrPng, downloadCollectionZip, downloadCollectionPdf } from '../utils/qrExport.js';
+import { downloadSingleQrPng, downloadCollectionZip, downloadCollectionPdf, fetchAllCollectionQrItems } from '../utils/qrExport.js';
 import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './CollectionDetail.css';
@@ -22,6 +22,8 @@ export default function CollectionDetail() {
   const [collectionStats, setCollectionStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageInfo, setPageInfo] = useState({ total: 0, pages: 1 });
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({ name: '', description: '' });
   const [busy, setBusy] = useState('');
@@ -49,10 +51,11 @@ export default function CollectionDetail() {
   async function load() {
     setLoading(true);
     try {
-      const { data } = await api.get(`/collections/${id}/qrcodes`, { params: { search: query, limit: 50 } });
+      const { data } = await api.get(`/collections/${id}/qrcodes`, { params: { search: query, page, limit: 24 } });
       setCol(data.collection);
       setQrItems(data.items);
       setCollectionStats(data.stats || null);
+      setPageInfo({ total: data.total, pages: data.pages || 1 });
     } catch {
       navigate(routes.collections);
     } finally {
@@ -60,23 +63,30 @@ export default function CollectionDetail() {
     }
   }
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => { load(); }, [id, page]);
 
-  // Fetch the collection's design logo once and reuse the resulting blob URL
-  // across every card thumbnail, instead of each card re-fetching it.
+  function runSearch() {
+    if (page === 1) load();
+    else setPage(1);
+  }
+
+  // Fetch the collection's design logo and custom frame image once each and
+  // reuse the resulting blob URLs across every card thumbnail, instead of
+  // each card re-fetching them. If either turns out to be unavailable (e.g.
+  // the file was lost on the server), we remember that so cards don't keep
+  // hammering a failing endpoint.
+  const [collectionLogoUnavailable, setCollectionLogoUnavailable] = useState(false);
   useEffect(() => {
     let cancelled = false;
     let revoke = () => {};
 
     async function run() {
-      if (!col?.design?.logo) { setCollectionLogoObjectUrl(null); return; }
-      try {
-        const { image, revoke: revokeFn } = await loadAuthenticatedImage(`/collections/${id}/design/logo`);
-        revoke = revokeFn;
-        if (!cancelled) setCollectionLogoObjectUrl(image?.src || null);
-      } catch {
-        if (!cancelled) setCollectionLogoObjectUrl(null);
-      }
+      if (!col?.design?.logo) { setCollectionLogoObjectUrl(null); setCollectionLogoUnavailable(false); return; }
+      const { image, revoke: revokeFn } = await loadAuthenticatedImage(`/collections/${id}/design/logo`);
+      revoke = revokeFn;
+      if (cancelled) return;
+      setCollectionLogoObjectUrl(image?.src || null);
+      setCollectionLogoUnavailable(!image);
     }
 
     run();
@@ -84,16 +94,39 @@ export default function CollectionDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, col?.design?.logo?.storedName]);
 
+  const [collectionFrameImageObjectUrl, setCollectionFrameImageObjectUrl] = useState(null);
+  const [collectionFrameImageUnavailable, setCollectionFrameImageUnavailable] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    let revoke = () => {};
+
+    async function run() {
+      if (!col?.design?.frameImage) { setCollectionFrameImageObjectUrl(null); setCollectionFrameImageUnavailable(false); return; }
+      const { image, revoke: revokeFn } = await loadAuthenticatedImage(`/collections/${id}/design/frame-image`);
+      revoke = revokeFn;
+      if (cancelled) return;
+      setCollectionFrameImageObjectUrl(image?.src || null);
+      setCollectionFrameImageUnavailable(!image);
+    }
+
+    run();
+    return () => { cancelled = true; revoke(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, col?.design?.frameImage?.storedName]);
+
   function resolveCardDesign(qr) {
     const useCustom = !!qr.useCustomDesign;
     const design = resolveEffectiveDesign(col?.design, qr.design, useCustom);
     let logoPath = null;
+    let frameImagePath = null;
     if (useCustom) {
       if (qr.design?.logo) logoPath = `/qrcodes/${qr._id}/design/logo`;
-    } else if (col?.design?.logo) {
-      logoPath = collectionLogoObjectUrl || `/collections/${id}/design/logo`;
+      if (qr.design?.frameImage) frameImagePath = `/qrcodes/${qr._id}/design/frame-image`;
+    } else {
+      if (col?.design?.logo && !collectionLogoUnavailable) logoPath = collectionLogoObjectUrl || `/collections/${id}/design/logo`;
+      if (col?.design?.frameImage && !collectionFrameImageUnavailable) frameImagePath = collectionFrameImageObjectUrl || `/collections/${id}/design/frame-image`;
     }
-    return { design, logoPath };
+    return { design, logoPath, frameImagePath };
   }
 
   async function createQr(e) {
@@ -123,20 +156,26 @@ export default function CollectionDetail() {
   async function downloadQrImage(qr) {
     setBusy(`dl-${qr._id}`);
     try {
-      const { design, logoPath } = resolveCardDesign(qr);
-      await downloadSingleQrPng({ vaultUrl: qr.vaultUrl, design, logoPath, filenameBase: qr.name });
-    } finally { setBusy(''); }
+      const { design, logoPath, frameImagePath } = resolveCardDesign(qr);
+      await downloadSingleQrPng({ vaultUrl: qr.vaultUrl, design, logoPath, frameImagePath, qrName: qr.name, filenameBase: qr.name });
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to download the QR image.'));
+    } finally {
+      setBusy('');
+    }
   }
 
   async function handleDownloadZip() {
     setBusy('zip');
     setError('');
     try {
+      const { items: allItems, collection: freshCol } = await fetchAllCollectionQrItems(id);
       await downloadCollectionZip({
-        qrs: qrItems,
-        design: resolveEffectiveDesign(col?.design, null, false),
-        logoPath: col?.design?.logo ? `/collections/${id}/design/logo` : null,
-        collectionName: col?.name
+        qrs: allItems,
+        design: resolveEffectiveDesign(freshCol?.design, null, false),
+        logoPath: freshCol?.design?.logo ? `/collections/${id}/design/logo` : null,
+        frameImagePath: freshCol?.design?.frameImage ? `/collections/${id}/design/frame-image` : null,
+        collectionName: freshCol?.name
       });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to download QR images.'));
@@ -149,11 +188,13 @@ export default function CollectionDetail() {
     setBusy('pdf');
     setError('');
     try {
+      const { items: allItems, collection: freshCol } = await fetchAllCollectionQrItems(id);
       await downloadCollectionPdf({
-        qrs: qrItems,
-        design: resolveEffectiveDesign(col?.design, null, false),
-        logoPath: col?.design?.logo ? `/collections/${id}/design/logo` : null,
-        collectionName: col?.name
+        qrs: allItems,
+        design: resolveEffectiveDesign(freshCol?.design, null, false),
+        logoPath: freshCol?.design?.logo ? `/collections/${id}/design/logo` : null,
+        frameImagePath: freshCol?.design?.frameImage ? `/collections/${id}/design/frame-image` : null,
+        collectionName: freshCol?.name
       });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to build the PDF.'));
@@ -325,7 +366,7 @@ export default function CollectionDetail() {
           {col?.description && <p>{col.description}</p>}
           {col?.defaultPdf && (
             <div className="col-pdf-indicator">
-              <FileText size={14} /> Default PDF: <strong>{col.defaultPdf.originalName}</strong>
+              <FileText size={14} /> Default PDF: <strong>{col.defaultPdf.originalName}</strong> — auto attached to all QRs
             </div>
           )}
         </div>
@@ -368,9 +409,9 @@ export default function CollectionDetail() {
         )}
         <div className="search-box">
           <Search size={18} />
-          <input placeholder="Search QR codes" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load()} />
+          <input placeholder="Search QR codes" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && runSearch()} />
         </div>
-        <button className="secondary-button" onClick={load} disabled={loading}><Search size={18} /> Search</button>
+        <button className="secondary-button" onClick={runSearch} disabled={loading}><Search size={18} /> Search</button>
       </div>
 
       <div className="qr-grid">
@@ -378,12 +419,12 @@ export default function CollectionDetail() {
           <article className="qr-card qr-card-skeleton" key={i}><span /><p /><dl><div /><div /><div /></dl></article>
         ))}
         {!loading && qrItems.map((qr) => {
-          const { design: cardDesign, logoPath: cardLogoPath } = resolveCardDesign(qr);
+          const { design: cardDesign, logoPath: cardLogoPath, frameImagePath: cardFrameImagePath } = resolveCardDesign(qr);
           return (
             <article className="qr-card" key={qr._id}>
               <div className="qr-card-head">
                 <div className="qr-card-thumb">
-                  <QRCanvas data={qr.vaultUrl} design={cardDesign} logoPath={cardLogoPath} qrPixelSize={140} />
+                  <QRCanvas data={qr.vaultUrl} design={cardDesign} logoPath={cardLogoPath} frameImagePath={cardFrameImagePath} qrName={qr.name} qrPixelSize={140} />
                 </div>
                 <div>
                   <strong>{qr.name}</strong>
@@ -415,6 +456,18 @@ export default function CollectionDetail() {
           <div className="qr-empty">No QR codes in this collection yet.</div>
         )}
       </div>
+
+      {!loading && pageInfo.total > 0 && (
+        <div className="qr-pagination">
+          <span className="qr-pagination-summary">
+            {pageInfo.total} QR code{pageInfo.total === 1 ? '' : 's'} &middot; Page {page} of {pageInfo.pages}
+          </span>
+          <div className="qr-pagination-buttons">
+            <button className="secondary-button" onClick={() => setPage((p) => Math.max(p - 1, 1))} disabled={page <= 1}>Previous</button>
+            <button className="secondary-button" onClick={() => setPage((p) => Math.min(p + 1, pageInfo.pages))} disabled={page >= pageInfo.pages}>Next</button>
+          </div>
+        </div>
+      )}
 
       {/* Create QR Modal */}
       {modal === 'create' && (

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Plus, Trash2, Edit2, FileText, Download } from 'lucide-react';
-import { api } from '../api/http.js';
+import { FolderOpen, Plus, Trash2, Edit2, FileText, Download, FileDown } from 'lucide-react';
+import { api, getErrorMessage } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
+import { resolveEffectiveDesign } from '../utils/qrEngine.js';
+import { downloadCollectionZip, downloadCollectionPdf, fetchAllCollectionQrItems } from '../utils/qrExport.js';
 import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './Collections.css';
@@ -81,19 +83,39 @@ export default function Collections() {
     }
   }
 
-  async function downloadCollectionZip(col) {
-    setBusy('zip');
+  async function downloadCollectionZipFile(col) {
+    setBusy(`zip-${col._id}`);
     setError('');
     try {
-      const res = await api.get(`/collections/${col._id}/qr-images.zip`, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${col?.name || 'collection'}-qr-images.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const { items, collection } = await fetchAllCollectionQrItems(col._id);
+      await downloadCollectionZip({
+        qrs: items,
+        design: resolveEffectiveDesign(collection?.design, null, false),
+        logoPath: collection?.design?.logo ? `/collections/${col._id}/design/logo` : null,
+        frameImagePath: collection?.design?.frameImage ? `/collections/${col._id}/design/frame-image` : null,
+        collectionName: collection?.name || col.name
+      });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to download QR images.');
+      setError(getErrorMessage(err, 'Failed to download QR images.'));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function downloadCollectionPdfFile(col) {
+    setBusy(`pdf-${col._id}`);
+    setError('');
+    try {
+      const { items, collection } = await fetchAllCollectionQrItems(col._id);
+      await downloadCollectionPdf({
+        qrs: items,
+        design: resolveEffectiveDesign(collection?.design, null, false),
+        logoPath: collection?.design?.logo ? `/collections/${col._id}/design/logo` : null,
+        frameImagePath: collection?.design?.frameImage ? `/collections/${col._id}/design/frame-image` : null,
+        collectionName: collection?.name || col.name
+      });
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to build the PDF.'));
     } finally {
       setBusy('');
     }
@@ -144,11 +166,20 @@ export default function Collections() {
               <button
                 className="icon-button"
                 title="Download QR Images Zip"
-                onClick={() => downloadCollectionZip(col)}
-                disabled={busy === 'zip'}
+                onClick={() => downloadCollectionZipFile(col)}
+                disabled={busy === `zip-${col._id}`}
               >
-                {busy === 'zip' ? <span className="spinner small-spinner" /> : <Download size={18} />}
+                {busy === `zip-${col._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
                 <span>ZIP</span>
+              </button>
+              <button
+                className="icon-button"
+                title="Download QR Images PDF"
+                onClick={() => downloadCollectionPdfFile(col)}
+                disabled={busy === `pdf-${col._id}`}
+              >
+                {busy === `pdf-${col._id}` ? <span className="spinner small-spinner" /> : <FileDown size={18} />}
+                <span>PDF</span>
               </button>
             </div>
           </article>

@@ -278,3 +278,31 @@
     margin: 0 auto;
   }
 }
+
+.qds-radio-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 2px 0 4px;
+}
+
+.qds-radio {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.qds-radio input {
+  accent-color: var(--primary);
+  width: 15px;
+  height: 15px;
+}
+
+.qds-frame-image-preview {
+  width: 84px;
+  height: 84px;
+}

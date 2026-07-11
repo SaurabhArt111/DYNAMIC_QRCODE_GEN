@@ -5,39 +5,75 @@
 
 import JSZip from 'jszip';
 import { jsPDF } from 'jspdf';
-import { renderQrCanvas, canvasToBlob } from './qrEngine.js';
+import { api } from '../api/http.js';
+import { renderQrCanvas, canvasToBlob, FRAME_STYLES_WITH_TEXT } from './qrEngine.js';
 import { loadAuthenticatedImage, triggerBlobDownload, safeFileName } from './designHelpers.js';
 
 const EXPORT_QR_PIXEL_SIZE = 640;
+const FETCH_PAGE_SIZE = 100;
+
+/**
+ * Collections are paginated server-side (so the on-screen grid stays fast),
+ * but an export needs every QR in the collection regardless of what's
+ * currently loaded on screen. This loops through every page.
+ */
+export async function fetchAllCollectionQrItems(collectionId) {
+  let page = 1;
+  let pages = 1;
+  let collection = null;
+  const items = [];
+
+  do {
+    const { data } = await api.get(`/collections/${collectionId}/qrcodes`, {
+      params: { page, limit: FETCH_PAGE_SIZE }
+    });
+    items.push(...data.items);
+    collection = data.collection;
+    pages = data.pages || 1;
+    page += 1;
+  } while (page <= pages);
+
+  return { items, collection };
+}
 
 /**
  * Renders one QR and triggers a browser download of the resulting PNG.
  */
-export async function downloadSingleQrPng({ vaultUrl, design, logoPath, filenameBase }) {
-  const { image, revoke } = await loadAuthenticatedImage(logoPath);
+export async function downloadSingleQrPng({ vaultUrl, design, logoPath, frameImagePath, qrName, filenameBase }) {
+  const [{ image, revoke }, { image: frameImage, revoke: revokeFrame }] = await Promise.all([
+    loadAuthenticatedImage(logoPath),
+    loadAuthenticatedImage(frameImagePath)
+  ]);
   try {
     const canvas = await renderQrCanvas({
       data: vaultUrl,
       design,
       logoImageEl: image,
+      frameImageEl: frameImage,
+      qrName: qrName ?? filenameBase,
       qrPixelSize: EXPORT_QR_PIXEL_SIZE
     });
     const blob = await canvasToBlob(canvas);
     triggerBlobDownload(blob, `${safeFileName(filenameBase)}.png`);
   } finally {
     revoke();
+    revokeFrame();
   }
 }
 
 /**
  * Renders every QR in `qrs` using the SAME design (the collection's default),
  * so a bulk export always looks like one consistent, on-brand batch — and
- * zips the results.
+ * zips the results. When the design's caption is set to use each QR's own
+ * name, every file in the ZIP gets its own caption automatically.
  *
  * `qrs` items need: { name, vaultUrl }.
  */
-export async function downloadCollectionZip({ qrs, design, logoPath, collectionName }) {
-  const { image, revoke } = await loadAuthenticatedImage(logoPath);
+export async function downloadCollectionZip({ qrs, design, logoPath, frameImagePath, collectionName }) {
+  const [{ image, revoke }, { image: frameImage, revoke: revokeFrame }] = await Promise.all([
+    loadAuthenticatedImage(logoPath),
+    loadAuthenticatedImage(frameImagePath)
+  ]);
   try {
     const zip = new JSZip();
     const usedNames = new Map();
@@ -47,6 +83,8 @@ export async function downloadCollectionZip({ qrs, design, logoPath, collectionN
         data: qr.vaultUrl,
         design,
         logoImageEl: image,
+        frameImageEl: frameImage,
+        qrName: qr.name,
         qrPixelSize: EXPORT_QR_PIXEL_SIZE
       });
       const blob = await canvasToBlob(canvas);
@@ -61,6 +99,7 @@ export async function downloadCollectionZip({ qrs, design, logoPath, collectionN
     triggerBlobDownload(zipBlob, `${safeFileName(collectionName, 'collection')}-qr-codes.zip`);
   } finally {
     revoke();
+    revokeFrame();
   }
 }
 
@@ -68,8 +107,11 @@ export async function downloadCollectionZip({ qrs, design, logoPath, collectionN
  * Same idea as the ZIP export, but lays every QR out on PDF pages (a grid of
  * cards with the QR's name printed underneath) instead.
  */
-export async function downloadCollectionPdf({ qrs, design, logoPath, collectionName }) {
-  const { image, revoke } = await loadAuthenticatedImage(logoPath);
+export async function downloadCollectionPdf({ qrs, design, logoPath, frameImagePath, collectionName }) {
+  const [{ image, revoke }, { image: frameImage, revoke: revokeFrame }] = await Promise.all([
+    loadAuthenticatedImage(logoPath),
+    loadAuthenticatedImage(frameImagePath)
+  ]);
   try {
     const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -96,6 +138,8 @@ export async function downloadCollectionPdf({ qrs, design, logoPath, collectionN
         data: qr.vaultUrl,
         design,
         logoImageEl: image,
+        frameImageEl: frameImage,
+        qrName: qr.name,
         qrPixelSize: EXPORT_QR_PIXEL_SIZE
       });
       const dataUrl = canvas.toDataURL('image/png');
@@ -109,9 +153,13 @@ export async function downloadCollectionPdf({ qrs, design, logoPath, collectionN
       const imgY = cellY + (cellH - drawH) / 2 - 10;
 
       pdf.addImage(dataUrl, 'PNG', imgX, imgY, drawW, drawH);
-      pdf.setFontSize(10);
-      pdf.setTextColor('#4B5563');
-      pdf.text(String(qr.name || ''), cellX + cellW / 2, cellY + cellH - 14, { align: 'center', maxWidth: cellW - 16 });
+      // When the frame itself already shows the QR's name as a caption,
+      // printing it again underneath would be redundant.
+      if (design.frameTextMode !== 'qrName' || !FRAME_STYLES_WITH_TEXT.has(design.frameStyle)) {
+        pdf.setFontSize(10);
+        pdf.setTextColor('#4B5563');
+        pdf.text(String(qr.name || ''), cellX + cellW / 2, cellY + cellH - 14, { align: 'center', maxWidth: cellW - 16 });
+      }
 
       col += 1;
       if (col >= cols) { col = 0; row += 1; }
@@ -121,5 +169,6 @@ export async function downloadCollectionPdf({ qrs, design, logoPath, collectionN
     pdf.save(`${safeFileName(collectionName, 'collection')}-qr-codes.pdf`);
   } finally {
     revoke();
+    revokeFrame();
   }
 }
