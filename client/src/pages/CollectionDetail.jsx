@@ -325,7 +325,7 @@ export default function CollectionDetail() {
           {col?.description && <p>{col.description}</p>}
           {col?.defaultPdf && (
             <div className="col-pdf-indicator">
-              <FileText size={14} /> Default PDF: <strong>{col.defaultPdf.originalName}</strong> — auto attached to all QRs
+              <FileText size={14} /> Default PDF: <strong>{col.defaultPdf.originalName}</strong>
             </div>
           )}
         </div>
