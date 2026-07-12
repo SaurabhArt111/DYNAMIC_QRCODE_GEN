@@ -18,6 +18,7 @@ export default function QRCodes() {
   const [query, setQuery] = useState({ search: '', filter: 'new', page: 1 });
   const [pageInfo, setPageInfo] = useState({ total: 0, pages: 1 });
   const [modal, setModal] = useState(null);
+  const [downloadQrTarget, setDownloadQrTarget] = useState(null);
   const [error, setError] = useState('');
   const [form, setForm] = useState({ name: '', description: '' });
   const [loading, setLoading] = useState(true);
@@ -161,11 +162,8 @@ export default function QRCodes() {
                 <button className="icon-button" title="Design this QR" onClick={() => setDesigningQr(qr)}>
                   <Palette size={18} />
                 </button>
-                <button className="icon-button" title="Download PNG" onClick={() => downloadQr(qr)} disabled={busyAction === `download-${qr._id}`}>
-                  {busyAction === `download-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
-                </button>
-                <button className="icon-button" title="Download SVG" onClick={() => downloadQrSvg(qr)} disabled={busyAction === `download-svg-${qr._id}`}>
-                  {busyAction === `download-svg-${qr._id}` ? <span className="spinner small-spinner" /> : <FileImage size={18} />}
+                <button className="icon-button" title="Download" onClick={() => { setDownloadQrTarget(qr); setModal('download-qr'); }} disabled={!!busyAction}>
+                  <Download size={18} />
                 </button>
                 <button className="icon-button" title="Recycle QR" onClick={() => {
                   if (window.confirm('Recycle this QR?')) recycleQr(qr._id);
@@ -195,6 +193,22 @@ export default function QRCodes() {
             <div className="field"><label>Description</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <button className="primary-button" disabled={busyAction === 'create'}>{busyAction === 'create' ? 'Creating...' : 'Create'}</button>
           </form>
+        </Modal>
+      )}
+
+      {modal === 'download-qr' && downloadQrTarget && (
+        <Modal title={`Download "${downloadQrTarget.name}"`} onClose={() => { setModal(null); setDownloadQrTarget(null); }}>
+          <div className="download-options">
+            <p className="field-hint">Choose a format to download this QR.</p>
+            <div className="button-row">
+              <button className="secondary-button" onClick={() => { downloadQr(downloadQrTarget); setModal(null); setDownloadQrTarget(null); }} disabled={busyAction === `download-${downloadQrTarget._id}`}>
+                {busyAction === `download-${downloadQrTarget._id}` ? <span className="spinner small-spinner" /> : <Download size={16} />} PNG
+              </button>
+              <button className="secondary-button" onClick={() => { downloadQrSvg(downloadQrTarget); setModal(null); setDownloadQrTarget(null); }} disabled={busyAction === `download-svg-${downloadQrTarget._id}`}>
+                {busyAction === `download-svg-${downloadQrTarget._id}` ? <span className="spinner small-spinner" /> : <FileImage size={16} />} SVG
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 

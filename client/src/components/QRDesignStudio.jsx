@@ -177,6 +177,14 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
     design.frameImageOffsetY ?? 0,
     (value) => updateDesign({ frameImageOffsetY: value })
   );
+  const [frameImageCaptionSizeLocal, setFrameImageCaptionSizeLocal] = useDebouncedField(
+    design.frameImageCaptionSize ?? 0.13,
+    (value) => updateDesign({ frameImageCaptionSize: value })
+  );
+  const [frameImageCaptionOffsetYLocal, setFrameImageCaptionOffsetYLocal] = useDebouncedField(
+    design.frameImageCaptionOffsetY ?? 0.06,
+    (value) => updateDesign({ frameImageCaptionOffsetY: value })
+  );
 
   function handleLogoPick(event) {
     const file = event.target.files?.[0];
@@ -479,6 +487,28 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
                         )}
                         <ColorRow label="Caption color" value={design.frameColor} onChange={(frameColor) => updateDesign({ frameColor })} />
                         <ColorRow label="Text color" value={design.frameTextColor} onChange={(frameTextColor) => updateDesign({ frameTextColor })} />
+                        <div className="qds-range-field">
+                          <span className="qds-field-label">Caption size ({Math.round(frameImageCaptionSizeLocal * 100)}%)</span>
+                          <input
+                            type="range"
+                            min="0.06"
+                            max="0.3"
+                            step="0.01"
+                            value={frameImageCaptionSizeLocal}
+                            onChange={(event) => setFrameImageCaptionSizeLocal(Number(event.target.value))}
+                          />
+                        </div>
+                        <div className="qds-range-field">
+                          <span className="qds-field-label">Caption vertical position</span>
+                          <input
+                            type="range"
+                            min="-0.35"
+                            max="0.35"
+                            step="0.01"
+                            value={frameImageCaptionOffsetYLocal}
+                            onChange={(event) => setFrameImageCaptionOffsetYLocal(Number(event.target.value))}
+                          />
+                        </div>
                       </>
                     )}
                   </>

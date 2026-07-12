@@ -30,6 +30,7 @@ export default function CollectionDetail() {
   const [error, setError] = useState('');
   const [showCollectionDesignStudio, setShowCollectionDesignStudio] = useState(false);
   const [designingQr, setDesigningQr] = useState(null);
+  const [downloadQrTarget, setDownloadQrTarget] = useState(null);
   const [collectionLogoObjectUrl, setCollectionLogoObjectUrl] = useState(null);
 
   // Bulk folder state
@@ -387,14 +388,8 @@ export default function CollectionDetail() {
           <button className="secondary-button" onClick={() => setShowCollectionDesignStudio(true)} disabled={loading}>
             <Palette size={18} /> Design Frame
           </button>
-          <button className="secondary-button" onClick={() => handleDownloadZip('png')} disabled={busy === 'zip' || loading || !qrItems.length}>
-            {busy === 'zip' ? <span className="spinner small-spinner" /> : <Download size={18} />} ZIP (PNG)
-          </button>
-          <button className="secondary-button" onClick={() => handleDownloadZip('svg')} disabled={busy === 'zip-svg' || loading || !qrItems.length}>
-            {busy === 'zip-svg' ? <span className="spinner small-spinner" /> : <FileImage size={18} />} ZIP (SVG)
-          </button>
-          <button className="secondary-button" onClick={handleDownloadPdf} disabled={busy === 'pdf' || loading || !qrItems.length}>
-            {busy === 'pdf' ? <span className="spinner small-spinner" /> : <FileDown size={18} />} PDF
+          <button className="secondary-button" onClick={() => setModal('download-collection')} disabled={loading || !qrItems.length || !!busy}>
+            <Download size={18} /> Download
           </button>
           <button className="secondary-button" onClick={() => { setModal('bulk'); setBulkResults(null); setBulkFolders([]); setBulkParentName(''); setBulkSkippedFiles(0); }}>
             <FolderUp size={18} /> Bulk Create
@@ -458,11 +453,8 @@ export default function CollectionDetail() {
                 <button className="icon-button" title="Design this QR" onClick={() => setDesigningQr(qr)}>
                   <Palette size={18} />
                 </button>
-                <button className="icon-button" title="Download PNG" onClick={() => downloadQrImage(qr)} disabled={busy === `dl-${qr._id}`}>
-                  {busy === `dl-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
-                </button>
-                <button className="icon-button" title="Download SVG" onClick={() => downloadQrImageSvg(qr)} disabled={busy === `dl-svg-${qr._id}`}>
-                  {busy === `dl-svg-${qr._id}` ? <span className="spinner small-spinner" /> : <FileImage size={18} />}
+                <button className="icon-button" title="Download" onClick={() => { setDownloadQrTarget(qr); setModal('download-qr'); }} disabled={!!busy}>
+                  <Download size={18} />
                 </button>
                 <button className="icon-button danger" title="Recycle" onClick={() => recycleQr(qr._id)}>
                   <Trash size={18} />
@@ -721,6 +713,43 @@ export default function CollectionDetail() {
                 )}
               </div>
             )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Collection Download Modal */}
+      {modal === 'download-collection' && (
+        <Modal title="Download Collection" onClose={() => setModal(null)}>
+          <div className="download-options">
+            <p className="field-hint">Choose how you'd like to download all QR images in this collection.</p>
+            <div className="button-row">
+              <button className="secondary-button" onClick={() => { handleDownloadZip('png'); setModal(null); }} disabled={busy === 'zip' || loading}>
+                {busy === 'zip' ? <span className="spinner small-spinner" /> : <Download size={16} />} ZIP (PNG)
+              </button>
+              <button className="secondary-button" onClick={() => { handleDownloadZip('svg'); setModal(null); }} disabled={busy === 'zip-svg' || loading}>
+                {busy === 'zip-svg' ? <span className="spinner small-spinner" /> : <FileImage size={16} />} ZIP (SVG)
+              </button>
+              <button className="secondary-button" onClick={() => { handleDownloadPdf(); setModal(null); }} disabled={busy === 'pdf' || loading}>
+                {busy === 'pdf' ? <span className="spinner small-spinner" /> : <FileDown size={16} />} PDF
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Single QR Download Modal */}
+      {modal === 'download-qr' && downloadQrTarget && (
+        <Modal title={`Download "${downloadQrTarget.name}"`} onClose={() => { setModal(null); setDownloadQrTarget(null); }}>
+          <div className="download-options">
+            <p className="field-hint">Choose a format to download this QR.</p>
+            <div className="button-row">
+              <button className="secondary-button" onClick={() => { downloadQrImage(downloadQrTarget); setModal(null); setDownloadQrTarget(null); }} disabled={busy === `dl-${downloadQrTarget._id}`}>
+                {busy === `dl-${downloadQrTarget._id}` ? <span className="spinner small-spinner" /> : <Download size={16} />} PNG
+              </button>
+              <button className="secondary-button" onClick={() => { downloadQrImageSvg(downloadQrTarget); setModal(null); setDownloadQrTarget(null); }} disabled={busy === `dl-svg-${downloadQrTarget._id}`}>
+                {busy === `dl-svg-${downloadQrTarget._id}` ? <span className="spinner small-spinner" /> : <FileImage size={16} />} SVG
+              </button>
+            </div>
           </div>
         </Modal>
       )}

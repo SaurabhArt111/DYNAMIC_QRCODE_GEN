@@ -71,7 +71,9 @@ export const DEFAULT_DESIGN = Object.freeze({
   frameColor: '#0F8A5F',
   frameTextColor: '#FFFFFF',
   frameImageScale: 0.55,
-  frameImageOffsetY: 0
+  frameImageOffsetY: 0,
+  frameImageCaptionSize: 0.13,
+  frameImageCaptionOffsetY: 0.06
 });
 
 /**
@@ -506,10 +508,12 @@ export function drawFrameOverlay(ctx, frameStyle, layout, design, qrName = '') {
       // in and a repeated caption on top would usually be unwanted.
       if (design.frameImageShowCaption) {
         const h = layout.canvasHeight;
-        const pillHeight = qrSize * 0.13;
+        const captionSizeMul = Math.max(0.04, Number(design.frameImageCaptionSize ?? 0.13));
+        const captionOffsetMul = Number(design.frameImageCaptionOffsetY ?? 0.06);
+        const pillHeight = qrSize * captionSizeMul;
         const pillW = w * 0.7;
         const pillX = (w - pillW) / 2;
-        const pillY = h - pillHeight - qrSize * 0.06;
+        const pillY = h - pillHeight - qrSize * captionOffsetMul;
         ctx.fillStyle = frameColor;
         roundRectPath(ctx, pillX, pillY, pillW, pillHeight, pillHeight / 2);
         ctx.fill();

@@ -25,6 +25,8 @@ export const designSchema = new mongoose.Schema(
     // (custom text or each QR's name) as a pill over the custom frame image.
     frameImageScale: { type: Number, default: 0.55 },
     frameImageOffsetY: { type: Number, default: 0 },
+    frameImageCaptionSize: { type: Number, default: 0.13 },
+    frameImageCaptionOffsetY: { type: Number, default: 0.06 },
     frameImageShowCaption: { type: Boolean, default: false },
     logo: {
       originalName: String,
@@ -47,7 +49,7 @@ export const designSchema = new mongoose.Schema(
 export const DESIGN_FIELDS = [
   'dotsType', 'cornersSquareType', 'cornersDotType', 'dotsColor', 'backgroundColor',
   'logoSize', 'hideBackgroundDots', 'frameStyle', 'frameTextMode', 'frameText', 'frameColor', 'frameTextColor',
-  'frameImageScale', 'frameImageOffsetY', 'frameImageShowCaption'
+  'frameImageScale', 'frameImageOffsetY', 'frameImageCaptionSize', 'frameImageCaptionOffsetY', 'frameImageShowCaption'
 ];
 
 export function pickDesignFields(body = {}) {
@@ -60,6 +62,12 @@ export function pickDesignFields(body = {}) {
     } else if (key === 'frameImageScale') {
       const num = Number(body[key]);
       out[key] = Number.isFinite(num) ? Math.min(Math.max(num, 0.2), 0.9) : 0.55;
+    } else if (key === 'frameImageCaptionSize') {
+      const num = Number(body[key]);
+      out[key] = Number.isFinite(num) ? Math.min(Math.max(num, 0.04), 0.3) : 0.13;
+    } else if (key === 'frameImageCaptionOffsetY') {
+      const num = Number(body[key]);
+      out[key] = Number.isFinite(num) ? Math.min(Math.max(num, -0.35), 0.35) : 0.06;
     } else if (key === 'frameImageOffsetY') {
       const num = Number(body[key]);
       out[key] = Number.isFinite(num) ? Math.min(Math.max(num, -0.35), 0.35) : 0;

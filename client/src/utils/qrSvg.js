@@ -234,10 +234,12 @@ function frameChromeMarkup(layout, design, qrName, frameImageDataUrl) {
         backdrop = `<image href="${frameImageDataUrl}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none"/>`;
       }
       if (design.frameImageShowCaption) {
-        const pillHeight = qrSize * 0.13;
+        const captionSizeMul = Math.max(0.04, Number(design.frameImageCaptionSize ?? 0.13));
+        const captionOffsetMul = Number(design.frameImageCaptionOffsetY ?? 0.06);
+        const pillHeight = qrSize * captionSizeMul;
         const pillW = w * 0.7;
         const pillX = (w - pillW) / 2;
-        const pillY = h - pillHeight - qrSize * 0.06;
+        const pillY = h - pillHeight - qrSize * captionOffsetMul;
         overlay = `<path d="${roundedRectPathD(pillX, pillY, pillW, pillHeight, pillHeight / 2)}" fill="${frameColor}"/>` +
           centeredTextMarkup(text, w / 2, pillY + pillHeight / 2, pillHeight * 0.4, textColor);
       }

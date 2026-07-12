@@ -25,6 +25,7 @@ export default function QRDetail() {
   const [busyAction, setBusyAction] = useState('');
   const [dragIndex, setDragIndex] = useState(null);
   const [showDesignStudio, setShowDesignStudio] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const queuedFiles = useMemo(() => selectedFiles.filter(Boolean), [selectedFiles]);
 
   async function load() {
@@ -173,8 +174,9 @@ export default function QRDetail() {
           <button className="secondary-button" onClick={() => navigator.clipboard.writeText(qr.vaultUrl)}><Copy size={18} /> Copy URL</button>
           <a className="secondary-button" href={qr.vaultUrl} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Open</a>
           <button className="secondary-button" onClick={() => setShowDesignStudio(true)}><Palette size={18} /> Design QR Code</button>
-          <button className="primary-button" onClick={downloadQr} disabled={busyAction === 'download'}><Download size={18} /> {busyAction === 'download' ? 'Preparing...' : 'QR PNG'}</button>
-          <button className="secondary-button" onClick={downloadQrSvg} disabled={busyAction === 'download-svg'}><FileImage size={18} /> {busyAction === 'download-svg' ? 'Preparing...' : 'QR SVG'}</button>
+          <button className="primary-button" onClick={() => setShowDownloadModal(true)} disabled={busyAction === 'download' || busyAction === 'download-svg'}>
+            <Download size={18} /> Download
+          </button>
           <button className="danger-button" onClick={recycle} disabled={busyAction === 'recycle'}><Trash2 size={18} /> Recycle</button>
         </div>
       </div>
@@ -205,6 +207,22 @@ export default function QRDetail() {
           </dl>
         </aside>
       </div>
+
+      {showDownloadModal && (
+        <Modal title={`Download "${qr.name}"`} onClose={() => setShowDownloadModal(false)}>
+          <div className="download-options">
+            <p className="field-hint">Choose a format to download this QR.</p>
+            <div className="button-row">
+              <button className="secondary-button" onClick={async () => { await downloadQr(); setShowDownloadModal(false); }} disabled={busyAction === 'download'}>
+                {busyAction === 'download' ? <span className="spinner small-spinner" /> : <Download size={16} />} PNG
+              </button>
+              <button className="secondary-button" onClick={async () => { await downloadQrSvg(); setShowDownloadModal(false); }} disabled={busyAction === 'download-svg'}>
+                {busyAction === 'download-svg' ? <span className="spinner small-spinner" /> : <FileImage size={16} />} SVG
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       <section className="detail-panel files-panel">
         <div className="files-head">

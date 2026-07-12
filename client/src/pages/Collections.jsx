@@ -13,6 +13,7 @@ export default function Collections() {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // 'create' | { edit: col }
+  const [downloadTarget, setDownloadTarget] = useState(null);
   const [form, setForm] = useState({ name: '', description: '' });
   const [pdfFile, setPdfFile] = useState(null);
   const [removePdf, setRemovePdf] = useState(false);
@@ -166,30 +167,11 @@ export default function Collections() {
               <button className="icon-button danger" title="Delete" onClick={() => deleteCollection(col)}><Trash2 size={16} /></button>
               <button
                 className="icon-button"
-                title="Download QR Images Zip (PNG)"
-                onClick={() => downloadCollectionZipFile(col, 'png')}
-                disabled={busy === `zip-${col._id}`}
+                title="Download"
+                onClick={() => setDownloadTarget(col)}
+                disabled={!!busy}
               >
-                {busy === `zip-${col._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
-                <span>ZIP</span>
-              </button>
-              <button
-                className="icon-button"
-                title="Download QR Images Zip (SVG)"
-                onClick={() => downloadCollectionZipFile(col, 'svg')}
-                disabled={busy === `zip-svg-${col._id}`}
-              >
-                {busy === `zip-svg-${col._id}` ? <span className="spinner small-spinner" /> : <FileImage size={18} />}
-                <span>SVG</span>
-              </button>
-              <button
-                className="icon-button"
-                title="Download QR Images PDF"
-                onClick={() => downloadCollectionPdfFile(col)}
-                disabled={busy === `pdf-${col._id}`}
-              >
-                {busy === `pdf-${col._id}` ? <span className="spinner small-spinner" /> : <FileDown size={18} />}
-                <span>PDF</span>
+                <Download size={18} />
               </button>
             </div>
           </article>
@@ -235,6 +217,25 @@ export default function Collections() {
             <div className="button-row">
               <button className="secondary-button" onClick={() => setModal(null)} disabled={busy}>Cancel</button>
               <button className="primary-button" onClick={submitForm} disabled={busy}>{busy ? 'Saving...' : (editingCol ? 'Save Changes' : 'Create Collection')}</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {downloadTarget && (
+        <Modal title={`Download "${downloadTarget.name}"`} onClose={() => setDownloadTarget(null)}>
+          <div className="download-options">
+            <p className="field-hint">Choose how you'd like to download all QR images in this collection.</p>
+            <div className="button-row">
+              <button className="secondary-button" onClick={() => { downloadCollectionZipFile(downloadTarget, 'png'); setDownloadTarget(null); }} disabled={busy === `zip-${downloadTarget._id}`}>
+                {busy === `zip-${downloadTarget._id}` ? <span className="spinner small-spinner" /> : <Download size={16} />} ZIP (PNG)
+              </button>
+              <button className="secondary-button" onClick={() => { downloadCollectionZipFile(downloadTarget, 'svg'); setDownloadTarget(null); }} disabled={busy === `zip-svg-${downloadTarget._id}`}>
+                {busy === `zip-svg-${downloadTarget._id}` ? <span className="spinner small-spinner" /> : <FileImage size={16} />} ZIP (SVG)
+              </button>
+              <button className="secondary-button" onClick={() => { downloadCollectionPdfFile(downloadTarget); setDownloadTarget(null); }} disabled={busy === `pdf-${downloadTarget._id}`}>
+                {busy === `pdf-${downloadTarget._id}` ? <span className="spinner small-spinner" /> : <FileDown size={16} />} PDF
+              </button>
             </div>
           </div>
         </Modal>
