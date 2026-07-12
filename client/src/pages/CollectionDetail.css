@@ -29,13 +29,13 @@
   flex-shrink: 0;
 }
 
-.qr-card-head {
+.coll-qr-card-head {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.qr-card-thumb {
+.coll-qr-card-thumb {
   width: 60px;
   height: 60px;
   flex-shrink: 0;
@@ -287,4 +287,147 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
+}
+
+
+.coll-qr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.coll-qr-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+  box-shadow: var(--shadow);
+}
+
+.coll-qr-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.coll-qr-card-thumb {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px;
+  display: grid;
+  place-items: center;
+}
+
+.coll-qr-card strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.coll-qr-card span,
+.coll-qr-card p,
+.coll-qr-card dt {
+  color: var(--muted);
+}
+
+.coll-qr-card span {
+  word-break: break-all;
+  font-size: 0.78rem;
+}
+
+.coll-qr-card p {
+  margin: 0;
+}
+
+.coll-qr-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+.coll-qr-card dd {
+  margin: 4px 0 0;
+  font-weight: 500;
+}
+
+.coll-qr-card-skeleton {
+  min-height: 210px;
+  align-content: start;
+}
+
+.coll-qr-card-skeleton span,
+.coll-qr-card-skeleton p,
+.coll-qr-card-skeleton dl div {
+  min-height: 18px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f1f5f3, #fff, #f1f5f3);
+  background-size: 220% 100%;
+  animation: qrSkeleton 1.15s ease-in-out infinite;
+}
+
+.coll-qr-card-skeleton span {
+  width: 68%;
+}
+
+.coll-qr-card-skeleton p {
+  width: 92%;
+}
+
+.coll-qr-card-skeleton dl div {
+  min-height: 44px;
+}
+
+.small-spinner {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+.qr-empty {
+  grid-column: 1 / -1;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  color: var(--muted);
+  background: var(--surface);
+  text-align: center;
+  font-weight: 500;
+}
+
+.qr-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 190px auto;
+  gap: 10px;
+}
+
+.search-box {
+  min-height: 42px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.search-box input,
+.qr-toolbar select {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.qr-toolbar select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--surface);
 }

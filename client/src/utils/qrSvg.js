@@ -133,23 +133,35 @@ function qrBodyMarkup(matrix, design, canvasSize) {
 }
 
 function logoMarkup(logoDataUrl, canvasSize, design) {
-  if (!logoDataUrl) return '';
+  if (!logoDataUrl) return { defs: '', markup: '', maskId: null };
   const ratio = Math.min(Math.max(design.logoSize || 0.22, 0.1), 0.35);
   const logoSize = canvasSize * ratio;
   const cx = canvasSize / 2;
   const cy = canvasSize / 2;
   let markup = '';
+  let defs = '';
+  let maskId = null;
 
-  if (design.hideBackgroundDots !== false && design.backgroundColor !== 'transparent') {
+  // If hiding background dots, either render a backdrop (opaque) or
+  // create a mask to punch a transparent hole through the QR dots.
+  if (design.hideBackgroundDots !== false) {
     const pad = logoSize * 0.16;
     const backdropSize = logoSize + pad * 2;
-    markup += `<path d="${roundedRectPathD(cx - backdropSize / 2, cy - backdropSize / 2, backdropSize, backdropSize, backdropSize * 0.22)}" fill="${design.backgroundColor || '#FFFFFF'}"/>`;
+    if (design.backgroundColor !== 'transparent') {
+      markup += `<path d="${roundedRectPathD(cx - backdropSize / 2, cy - backdropSize / 2, backdropSize, backdropSize, backdropSize * 0.22)}" fill="${design.backgroundColor || '#FFFFFF'}"/>`;
+    } else {
+      maskId = `logo-mask-${Math.round(cx)}-${Math.round(cy)}`;
+      defs += `<mask id="${maskId}" maskUnits="userSpaceOnUse">` +
+        `<rect x="0" y="0" width="${canvasSize}" height="${canvasSize}" fill="#ffffff"/>` +
+        `<path d="${roundedRectPathD(cx - logoSize / 2, cy - logoSize / 2, logoSize, logoSize, logoSize * 0.18)}" fill="#000000"/>` +
+        `</mask>`;
+    }
   }
 
   const clipId = `logo-clip-${Math.round(cx)}-${Math.round(cy)}`;
-  markup += `<clipPath id="${clipId}"><path d="${roundedRectPathD(cx - logoSize / 2, cy - logoSize / 2, logoSize, logoSize, logoSize * 0.18)}"/></clipPath>`;
-  markup += `<image href="${logoDataUrl}" x="${cx - logoSize / 2}" y="${cy - logoSize / 2}" width="${logoSize}" height="${logoSize}" clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice"/>`;
-  return markup;
+  defs += `<clipPath id="${clipId}" clipPathUnits="userSpaceOnUse"><path d="${roundedRectPathD(cx - logoSize / 2, cy - logoSize / 2, logoSize, logoSize, logoSize * 0.18)}"/></clipPath>`;
+  markup += `<image href="${logoDataUrl}" x="${cx - logoSize / 2}" y="${cy - logoSize / 2}" width="${logoSize}" height="${logoSize}" clip-path="url(#${clipId})" preserveAspectRatio="none"/>`;
+  return { defs, markup, maskId };
 }
 
 // --- Frame chrome ----------------------------------------------------------
@@ -262,11 +274,15 @@ export function renderQrSvgString({ data, design, logoDataUrl = null, frameImage
 
   const { backdrop, overlay } = frameChromeMarkup(layout, finalDesign, qrName, frameImageDataUrl);
 
+  const logo = logoMarkup(logoDataUrl, qrPixelSize, finalDesign);
+  const body = logo.maskId
+    ? `<g mask="url(#${logo.maskId})">${qrBodyMarkup(matrix, finalDesign, qrPixelSize)}</g>`
+    : qrBodyMarkup(matrix, finalDesign, qrPixelSize);
   const qrGroup =
     `<g transform="translate(${layout.qrX}, ${layout.qrY}) scale(${layout.qrSize / qrPixelSize})">` +
-    `<defs></defs>` +
-    qrBodyMarkup(matrix, finalDesign, qrPixelSize) +
-    logoMarkup(logoDataUrl, qrPixelSize, finalDesign) +
+    `<defs>${logo.defs}</defs>` +
+    body +
+    logo.markup +
     `</g>`;
 
   return (

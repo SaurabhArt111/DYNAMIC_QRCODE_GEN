@@ -430,16 +430,16 @@ export default function CollectionDetail() {
         <button className="secondary-button" onClick={runSearch} disabled={loading}><Search size={18} /> Search</button>
       </div>
 
-      <div className="qr-grid">
+      <div className="coll-qr-grid">
         {loading && Array.from({ length: 4 }).map((_, i) => (
-          <article className="qr-card qr-card-skeleton" key={i}><span /><p /><dl><div /><div /><div /></dl></article>
+          <article className="coll-qr-card coll-qr-card-skeleton" key={i}><span /><p /><dl><div /><div /><div /></dl></article>
         ))}
         {!loading && qrItems.map((qr) => {
           const { design: cardDesign, logoPath: cardLogoPath, frameImagePath: cardFrameImagePath } = resolveCardDesign(qr);
           return (
-            <article className="qr-card" key={qr._id}>
-              <div className="qr-card-head">
-                <div className="qr-card-thumb">
+            <article className="coll-qr-card" key={qr._id}>
+              <div className="coll-qr-card-head">
+                <div className="coll-qr-card-thumb">
                   <QRCanvas data={qr.vaultUrl} design={cardDesign} logoPath={cardLogoPath} frameImagePath={cardFrameImagePath} qrName={qr.name} qrPixelSize={140} />
                 </div>
                 <div>
