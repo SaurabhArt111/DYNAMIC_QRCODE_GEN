@@ -41,8 +41,8 @@
 }
 
 .qds-editor {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr;
   gap: 14px;
   min-width: 0;
 }
@@ -86,7 +86,7 @@
 .qds-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .qds-field-label {
@@ -151,6 +151,7 @@
   gap: 12px;
   flex-wrap: wrap;
   padding-top: 4px;
+  margin: 4px;
 }
 
 .qds-color-row .qds-field-label {

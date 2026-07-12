@@ -19,7 +19,10 @@
 }
 
 .viewer-header h1 {
-  margin: 0 0 8px;
+  color: #fff;
+  font-size: clamp(1.35rem, 4vw, 2.2rem);
+  line-height: 1.6;
+  font-weight: 600;
   font-size: clamp(1.45rem, 4vw, 2.7rem);
 }
 
@@ -415,6 +418,10 @@
   .mobile-file-nav button.active .mobile-file-dot {
     width: 24px;
     background: var(--primary);
+  }
+
+  .viewer-header h1 {
+    margin: 8px 0;
   }
 }
 

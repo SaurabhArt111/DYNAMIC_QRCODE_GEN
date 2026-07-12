@@ -138,7 +138,7 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
   const fileInputRef = useRef(null);
   const frameImageInputRef = useRef(null);
 
-  const previewQrName = isQrScope ? (qr?.name || 'Your QR') : 'Sample Product Name';
+  const previewQrName = isQrScope ? (qr?.name || 'Your QR') : 'Product Name';
   const previewVaultUrl = isQrScope ? qr?.vaultUrl : `${window.location.origin}/vault/sample-qr-code`;
 
   const [localLogoObjectUrl, setLocalLogoObjectUrl] = useState(null);

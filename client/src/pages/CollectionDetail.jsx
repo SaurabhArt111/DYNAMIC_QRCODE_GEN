@@ -78,7 +78,7 @@ export default function CollectionDetail() {
   const [collectionLogoUnavailable, setCollectionLogoUnavailable] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    let revoke = () => {};
+    let revoke = () => { };
 
     async function run() {
       if (!col?.design?.logo) { setCollectionLogoObjectUrl(null); setCollectionLogoUnavailable(false); return; }
@@ -98,7 +98,7 @@ export default function CollectionDetail() {
   const [collectionFrameImageUnavailable, setCollectionFrameImageUnavailable] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    let revoke = () => {};
+    let revoke = () => { };
 
     async function run() {
       if (!col?.design?.frameImage) { setCollectionFrameImageObjectUrl(null); setCollectionFrameImageUnavailable(false); return; }
@@ -150,7 +150,7 @@ export default function CollectionDetail() {
     try {
       await api.delete(`/qrcodes/${qrId}`);
       await load();
-    } catch {}
+    } catch { }
   }
 
   async function downloadQrImage(qr) {
@@ -379,7 +379,7 @@ export default function CollectionDetail() {
           {col?.description && <p>{col.description}</p>}
           {col?.defaultPdf && (
             <div className="col-pdf-indicator">
-              <FileText size={14} /> Default PDF: <strong>{col.defaultPdf.originalName}</strong> — auto attached to all QRs
+              <FileText size={14} /> Default PDF: <strong>{col.defaultPdf.originalName}</strong>
             </div>
           )}
         </div>
@@ -631,12 +631,12 @@ export default function CollectionDetail() {
                     <div className="bulk-folder-list bulk-file-list">
                       {bulk2PrimaryFiles.map((file) => (
                         <div className="bulk-folder-row" key={`${file.name}-${file.size}`}>
-                        <div>
-                          <strong>{fileTitle(file)}</strong>
-                          <span>{file.name} - {formatBytes(file.size)}</span>
+                          <div>
+                            <strong>{fileTitle(file)}</strong>
+                            <span>{file.name} - {formatBytes(file.size)}</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                     </div>
                   )}
                   <button
@@ -671,7 +671,7 @@ export default function CollectionDetail() {
               {bulk2AssociatedFiles.length > 0 && (
                 <div className="bulk-folder-list bulk-file-list">
                   {bulk2AssociatedFiles.map((file) => (
-                      <div className="bulk-folder-row" key={`${file.name}-${file.size}-${file.lastModified}`}>
+                    <div className="bulk-folder-row" key={`${file.name}-${file.size}-${file.lastModified}`}>
                       <div>
                         <strong>{fileTitle(file)}</strong>
                         <span>{file.name} - {formatBytes(file.size)}</span>
@@ -680,15 +680,14 @@ export default function CollectionDetail() {
                   ))}
                 </div>
               )}
-              <div className="button-row">
+              <div className="button-row"><button
+                className="primary-button"
+                onClick={runBulkCreate2Associated}
+                disabled={!bulk2AssociatedFiles.length || busy === 'bulk2-associated'}
+              >
+                {busy === 'bulk2-associated' ? 'Attaching...' : 'Attach Matching Files'}
+              </button>
                 <button className="secondary-button" onClick={() => { setModal(null); resetBulk2(); }}>Done</button>
-                <button
-                  className="primary-button"
-                  onClick={runBulkCreate2Associated}
-                  disabled={!bulk2AssociatedFiles.length || busy === 'bulk2-associated'}
-                >
-                  {busy === 'bulk2-associated' ? 'Attaching...' : 'Attach Matching Files'}
-                </button>
               </div>
             </div>
 
