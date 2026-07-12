@@ -102,6 +102,7 @@
 }
 
 @media (max-width: 900px) {
+
   .settings-grid,
   .theme-grid {
     grid-template-columns: 1fr;

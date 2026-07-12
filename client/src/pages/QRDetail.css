@@ -387,12 +387,16 @@
     padding: 24px 16px;
   }
 }
+
 .file-row-collection {
   border: 1px dashed var(--primary);
   background: color-mix(in srgb, var(--primary) 5%, var(--surface));
 }
 
-.col-pdf-icon { color: var(--primary); flex-shrink: 0; }
+.col-pdf-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
 
 .col-pdf-tag {
   font-size: 0.72rem;

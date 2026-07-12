@@ -1,6 +1,7 @@
 export const routes = {
   landing: '/',
   login: '/login',
+  viewer: (token = ':token') => `/vault/${token}`,
   adminRoot: '/dv-control',
   dashboard: '/dv-control',
   collections: '/dv-control/collections',

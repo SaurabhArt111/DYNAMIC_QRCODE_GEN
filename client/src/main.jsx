@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   createBrowserRouter,
@@ -13,19 +13,34 @@ import { useAuth } from './context/AuthContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import App from './App.jsx';
-import Login from './pages/Login.jsx';
-import Landing from './pages/Landing.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Collections from './pages/Collections.jsx';
-import CollectionDetail from './pages/CollectionDetail.jsx';
-import QRCodes from './pages/QRCodes.jsx';
-import QRDetail from './pages/QRDetail.jsx';
-import RecycleBin from './pages/RecycleBin.jsx';
-import Settings from './pages/Settings.jsx';
-import NotFound from './pages/NotFound.jsx';
 import { routes } from './routes/paths.js';
 
 import './styles/global.css';
+
+// Every route below is its own JS chunk, downloaded only when visited. This
+// matters most for the public Viewer route (what a QR scan actually opens,
+// often on a phone on cellular data) — it no longer pulls in the rest of
+// the admin dashboard (the Design QR Code studio, ZIP/PDF export, etc.)
+// just to show someone their files.
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Landing = lazy(() => import('./pages/Landing.jsx'));
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const Collections = lazy(() => import('./pages/Collections.jsx'));
+const CollectionDetail = lazy(() => import('./pages/CollectionDetail.jsx'));
+const QRCodes = lazy(() => import('./pages/QRCodes.jsx'));
+const QRDetail = lazy(() => import('./pages/QRDetail.jsx'));
+const RecycleBin = lazy(() => import('./pages/RecycleBin.jsx'));
+const Settings = lazy(() => import('./pages/Settings.jsx'));
+const Viewer = lazy(() => import('./pages/Viewer.jsx'));
+const NotFound = lazy(() => import('./pages/NotFound.jsx'));
+
+function RouteLoading() {
+  return (
+    <div style={{ display: 'grid', placeItems: 'center', minHeight: '40vh' }}>
+      <span className="spinner" />
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -56,6 +71,10 @@ const router = createBrowserRouter(
           <Login />
         </PublicOnlyRoute>
       )
+    },
+    {
+      path: routes.viewer(),
+      element: <Viewer />
     },
     {
       path: routes.adminRoot,
@@ -93,7 +112,9 @@ createRoot(document.getElementById('root')).render(
       <AuthProvider>
         <ThemeProvider>
           <ToastProvider>
-            <RouterProvider router={router} />
+            <Suspense fallback={<RouteLoading />}>
+              <RouterProvider router={router} />
+            </Suspense>
           </ToastProvider>
         </ThemeProvider>
       </AuthProvider>

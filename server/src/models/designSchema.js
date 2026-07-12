@@ -21,9 +21,11 @@ export const designSchema = new mongoose.Schema(
     frameTextColor: { type: String, default: '#FFFFFF' },
     // How large the QR appears inside an uploaded custom frame image, and a
     // vertical nudge (as a fraction of the frame's height) for frames whose
-    // cutout isn't perfectly centered.
+    // cutout isn't perfectly centered. Optionally shows the same caption
+    // (custom text or each QR's name) as a pill over the custom frame image.
     frameImageScale: { type: Number, default: 0.55 },
     frameImageOffsetY: { type: Number, default: 0 },
+    frameImageShowCaption: { type: Boolean, default: false },
     logo: {
       originalName: String,
       storedName: String,
@@ -45,7 +47,7 @@ export const designSchema = new mongoose.Schema(
 export const DESIGN_FIELDS = [
   'dotsType', 'cornersSquareType', 'cornersDotType', 'dotsColor', 'backgroundColor',
   'logoSize', 'hideBackgroundDots', 'frameStyle', 'frameTextMode', 'frameText', 'frameColor', 'frameTextColor',
-  'frameImageScale', 'frameImageOffsetY'
+  'frameImageScale', 'frameImageOffsetY', 'frameImageShowCaption'
 ];
 
 export function pickDesignFields(body = {}) {
@@ -61,10 +63,12 @@ export function pickDesignFields(body = {}) {
     } else if (key === 'frameImageOffsetY') {
       const num = Number(body[key]);
       out[key] = Number.isFinite(num) ? Math.min(Math.max(num, -0.35), 0.35) : 0;
-    } else if (key === 'hideBackgroundDots') {
+    } else if (key === 'hideBackgroundDots' || key === 'frameImageShowCaption') {
       out[key] = body[key] === true || body[key] === 'true';
     } else if (key === 'frameTextMode') {
       out[key] = body[key] === 'qrName' ? 'qrName' : 'custom';
+    } else if (key === 'backgroundColor' || key === 'dotsColor') {
+      out[key] = body[key] === 'transparent' ? 'transparent' : String(body[key]).slice(0, 120);
     } else {
       out[key] = String(body[key]).slice(0, 120);
     }

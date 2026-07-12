@@ -21,7 +21,6 @@ import { errorHandler, notFound } from './middleware/notFound.js';
 const app = express();
 const nodeEnv = process.env.NODE_ENV || 'development';
 const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-const viewerUrl = env.viewerUrl || 'http://localhost:5174';
 const isBehindProxy = nodeEnv === 'production' || process.env.RENDER === 'true' || Boolean(process.env.RENDER_EXTERNAL_URL);
 
 function toOrigin(url) {
@@ -32,9 +31,7 @@ function toOrigin(url) {
   }
 }
 
-// The admin dashboard and the public viewer are two separate deployed apps
-// (different origins), so both need to be allowed to call this API.
-const allowedOrigins = [clientUrl, viewerUrl, env.clientUrl, env.publicBaseUrl]
+const allowedOrigins = [clientUrl, env.clientUrl, env.publicBaseUrl, 'http://localhost:5173']
   .filter(Boolean)
   .map(toOrigin)
   .filter((url, index, list) => list.indexOf(url) === index);
@@ -56,8 +53,6 @@ app.use(helmet({
 app.use(compression());
 app.use(cors({
   origin(origin, callback) {
-    // Same-origin / non-browser requests (curl, server-to-server) send no
-    // Origin header at all — allow those through.
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },
@@ -76,7 +71,7 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/vault/:token', (req, res) => {
-  res.redirect(302, `${viewerUrl}/vault/${req.params.token}`);
+  res.redirect(302, `${clientUrl}/vault/${req.params.token}`);
 });
 
 app.use('/api/auth', authRoutes);

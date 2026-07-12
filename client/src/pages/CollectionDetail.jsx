@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft, Plus, Download, FileDown, Trash, Search, FolderUp, FileText, CheckCircle2, XCircle, Loader, HardDrive, QrCode, Palette
+  ArrowLeft, Plus, Download, FileDown, FileImage, Trash, Search, FolderUp, FileText, CheckCircle2, XCircle, Loader, HardDrive, QrCode, Palette
 } from 'lucide-react';
 import { api, getErrorMessage } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
@@ -9,7 +9,7 @@ import QRCanvas from '../components/QRCanvas.jsx';
 import QRDesignStudio from '../components/QRDesignStudio.jsx';
 import { loadAuthenticatedImage, resolveDesignAndLogoUrl } from '../utils/designHelpers.js';
 import { resolveEffectiveDesign } from '../utils/qrEngine.js';
-import { downloadSingleQrPng, downloadCollectionZip, downloadCollectionPdf, fetchAllCollectionQrItems } from '../utils/qrExport.js';
+import { downloadSingleQrPng, downloadSingleQrSvg, downloadCollectionZip, downloadCollectionPdf, fetchAllCollectionQrItems } from '../utils/qrExport.js';
 import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './CollectionDetail.css';
@@ -165,8 +165,20 @@ export default function CollectionDetail() {
     }
   }
 
-  async function handleDownloadZip() {
-    setBusy('zip');
+  async function downloadQrImageSvg(qr) {
+    setBusy(`dl-svg-${qr._id}`);
+    try {
+      const { design, logoPath, frameImagePath } = resolveCardDesign(qr);
+      await downloadSingleQrSvg({ vaultUrl: qr.vaultUrl, design, logoPath, frameImagePath, qrName: qr.name, filenameBase: qr.name });
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to download the QR SVG.'));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function handleDownloadZip(format = 'png') {
+    setBusy(format === 'svg' ? 'zip-svg' : 'zip');
     setError('');
     try {
       const { items: allItems, collection: freshCol } = await fetchAllCollectionQrItems(id);
@@ -175,7 +187,8 @@ export default function CollectionDetail() {
         design: resolveEffectiveDesign(freshCol?.design, null, false),
         logoPath: freshCol?.design?.logo ? `/collections/${id}/design/logo` : null,
         frameImagePath: freshCol?.design?.frameImage ? `/collections/${id}/design/frame-image` : null,
-        collectionName: freshCol?.name
+        collectionName: freshCol?.name,
+        format
       });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to download QR images.'));
@@ -374,8 +387,11 @@ export default function CollectionDetail() {
           <button className="secondary-button" onClick={() => setShowCollectionDesignStudio(true)} disabled={loading}>
             <Palette size={18} /> Design Frame
           </button>
-          <button className="secondary-button" onClick={handleDownloadZip} disabled={busy === 'zip' || loading || !qrItems.length}>
-            {busy === 'zip' ? <span className="spinner small-spinner" /> : <Download size={18} />} ZIP
+          <button className="secondary-button" onClick={() => handleDownloadZip('png')} disabled={busy === 'zip' || loading || !qrItems.length}>
+            {busy === 'zip' ? <span className="spinner small-spinner" /> : <Download size={18} />} ZIP (PNG)
+          </button>
+          <button className="secondary-button" onClick={() => handleDownloadZip('svg')} disabled={busy === 'zip-svg' || loading || !qrItems.length}>
+            {busy === 'zip-svg' ? <span className="spinner small-spinner" /> : <FileImage size={18} />} ZIP (SVG)
           </button>
           <button className="secondary-button" onClick={handleDownloadPdf} disabled={busy === 'pdf' || loading || !qrItems.length}>
             {busy === 'pdf' ? <span className="spinner small-spinner" /> : <FileDown size={18} />} PDF
@@ -442,8 +458,11 @@ export default function CollectionDetail() {
                 <button className="icon-button" title="Design this QR" onClick={() => setDesigningQr(qr)}>
                   <Palette size={18} />
                 </button>
-                <button className="icon-button" title="Download QR" onClick={() => downloadQrImage(qr)} disabled={busy === `dl-${qr._id}`}>
+                <button className="icon-button" title="Download PNG" onClick={() => downloadQrImage(qr)} disabled={busy === `dl-${qr._id}`}>
                   {busy === `dl-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
+                </button>
+                <button className="icon-button" title="Download SVG" onClick={() => downloadQrImageSvg(qr)} disabled={busy === `dl-svg-${qr._id}`}>
+                  {busy === `dl-svg-${qr._id}` ? <span className="spinner small-spinner" /> : <FileImage size={18} />}
                 </button>
                 <button className="icon-button danger" title="Recycle" onClick={() => recycleQr(qr._id)}>
                   <Trash size={18} />

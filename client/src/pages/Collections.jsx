@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Plus, Trash2, Edit2, FileText, Download, FileDown } from 'lucide-react';
+import { FolderOpen, Plus, Trash2, Edit2, FileText, Download, FileDown, FileImage } from 'lucide-react';
 import { api, getErrorMessage } from '../api/http.js';
 import Modal from '../components/Modal.jsx';
 import { resolveEffectiveDesign } from '../utils/qrEngine.js';
@@ -83,8 +83,8 @@ export default function Collections() {
     }
   }
 
-  async function downloadCollectionZipFile(col) {
-    setBusy(`zip-${col._id}`);
+  async function downloadCollectionZipFile(col, format = 'png') {
+    setBusy(format === 'svg' ? `zip-svg-${col._id}` : `zip-${col._id}`);
     setError('');
     try {
       const { items, collection } = await fetchAllCollectionQrItems(col._id);
@@ -93,7 +93,8 @@ export default function Collections() {
         design: resolveEffectiveDesign(collection?.design, null, false),
         logoPath: collection?.design?.logo ? `/collections/${col._id}/design/logo` : null,
         frameImagePath: collection?.design?.frameImage ? `/collections/${col._id}/design/frame-image` : null,
-        collectionName: collection?.name || col.name
+        collectionName: collection?.name || col.name,
+        format
       });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to download QR images.'));
@@ -165,12 +166,21 @@ export default function Collections() {
               <button className="icon-button danger" title="Delete" onClick={() => deleteCollection(col)}><Trash2 size={16} /></button>
               <button
                 className="icon-button"
-                title="Download QR Images Zip"
-                onClick={() => downloadCollectionZipFile(col)}
+                title="Download QR Images Zip (PNG)"
+                onClick={() => downloadCollectionZipFile(col, 'png')}
                 disabled={busy === `zip-${col._id}`}
               >
                 {busy === `zip-${col._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
                 <span>ZIP</span>
+              </button>
+              <button
+                className="icon-button"
+                title="Download QR Images Zip (SVG)"
+                onClick={() => downloadCollectionZipFile(col, 'svg')}
+                disabled={busy === `zip-svg-${col._id}`}
+              >
+                {busy === `zip-svg-${col._id}` ? <span className="spinner small-spinner" /> : <FileImage size={18} />}
+                <span>SVG</span>
               </button>
               <button
                 className="icon-button"

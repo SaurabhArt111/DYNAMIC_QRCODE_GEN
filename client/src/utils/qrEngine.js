@@ -241,14 +241,24 @@ function drawFinderPattern(ctx, x, y, cellSize, squareType, dotType, dotsColor, 
   const innerHoleSize = outerSize - ringThickness * 2;
   const innerDotSize = 3 * cellSize;
   const innerDotOffset = 2 * cellSize;
+  const isTransparentBg = backgroundColor === 'transparent';
 
   ctx.fillStyle = dotsColor;
   finderShapePath(ctx, x, y, outerSize, squareType);
   ctx.fill();
 
-  ctx.fillStyle = backgroundColor;
-  finderShapePath(ctx, x + ringThickness, y + ringThickness, innerHoleSize, squareType);
-  ctx.fill();
+  if (isTransparentBg) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = '#000000';
+    finderShapePath(ctx, x + ringThickness, y + ringThickness, innerHoleSize, squareType);
+    ctx.fill();
+    ctx.restore();
+  } else {
+    ctx.fillStyle = backgroundColor;
+    finderShapePath(ctx, x + ringThickness, y + ringThickness, innerHoleSize, squareType);
+    ctx.fill();
+  }
 
   ctx.fillStyle = dotsColor;
   finderShapePath(ctx, x + innerDotOffset, y + innerDotOffset, innerDotSize, dotType);
@@ -265,8 +275,10 @@ export function drawStyledQr(ctx, matrix, design, canvasSize) {
   const totalModules = size + margin * 2;
   const cellSize = canvasSize / totalModules;
 
-  ctx.fillStyle = design.backgroundColor || '#FFFFFF';
-  ctx.fillRect(0, 0, canvasSize, canvasSize);
+  if (design.backgroundColor !== 'transparent') {
+    ctx.fillStyle = design.backgroundColor || '#FFFFFF';
+    ctx.fillRect(0, 0, canvasSize, canvasSize);
+  }
 
   ctx.fillStyle = design.dotsColor || '#000000';
   for (let row = 0; row < size; row += 1) {
@@ -300,9 +312,18 @@ export function drawLogo(ctx, logoImg, canvasSize, design) {
 
   if (design.hideBackgroundDots !== false) {
     const pad = logoSize * 0.16;
-    ctx.fillStyle = design.backgroundColor || '#FFFFFF';
-    roundRectPath(ctx, cx - logoSize / 2 - pad, cy - logoSize / 2 - pad, logoSize + pad * 2, logoSize + pad * 2, (logoSize + pad * 2) * 0.22);
-    ctx.fill();
+    if (design.backgroundColor === 'transparent') {
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = '#000000';
+      roundRectPath(ctx, cx - logoSize / 2 - pad, cy - logoSize / 2 - pad, logoSize + pad * 2, logoSize + pad * 2, (logoSize + pad * 2) * 0.22);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.fillStyle = design.backgroundColor || '#FFFFFF';
+      roundRectPath(ctx, cx - logoSize / 2 - pad, cy - logoSize / 2 - pad, logoSize + pad * 2, logoSize + pad * 2, (logoSize + pad * 2) * 0.22);
+      ctx.fill();
+    }
   }
 
   ctx.save();
@@ -479,10 +500,23 @@ export function drawFrameOverlay(ctx, frameStyle, layout, design, qrName = '') {
       ctx.stroke();
       break;
     }
-    case 'custom-image':
-      // The uploaded image already contains all of its own chrome/caption —
-      // nothing to draw on top.
+    case 'custom-image': {
+      // The uploaded image already contains its own chrome; a caption is
+      // opt-in since most custom frames already have their own text baked
+      // in and a repeated caption on top would usually be unwanted.
+      if (design.frameImageShowCaption) {
+        const h = layout.canvasHeight;
+        const pillHeight = qrSize * 0.13;
+        const pillW = w * 0.7;
+        const pillX = (w - pillW) / 2;
+        const pillY = h - pillHeight - qrSize * 0.06;
+        ctx.fillStyle = frameColor;
+        roundRectPath(ctx, pillX, pillY, pillW, pillHeight, pillHeight / 2);
+        ctx.fill();
+        drawCenteredText(ctx, text, w / 2, pillY + pillHeight / 2, pillHeight * 0.4, textColor);
+      }
       break;
+    }
     case 'none':
     default:
       break;

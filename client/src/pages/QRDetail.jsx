@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowDown, ArrowLeft, ArrowUp, Copy, Download, ExternalLink, FileText, GripVertical, Palette, RefreshCw, Save, Trash2, UploadCloud, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, Copy, Download, ExternalLink, FileImage, FileText, GripVertical, Palette, RefreshCw, Save, Trash2, UploadCloud, X } from 'lucide-react';
 import { api, fileUrl, getErrorMessage } from '../api/http.js';
 import { useToast } from '../context/ToastContext.jsx';
 import Modal from '../components/Modal.jsx';
 import QRCanvas from '../components/QRCanvas.jsx';
 import QRDesignStudio from '../components/QRDesignStudio.jsx';
 import { resolveDesignAndLogoUrl } from '../utils/designHelpers.js';
-import { downloadSingleQrPng } from '../utils/qrExport.js';
+import { downloadSingleQrPng, downloadSingleQrSvg } from '../utils/qrExport.js';
 import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './QRDetail.css';
@@ -113,6 +113,18 @@ export default function QRDetail() {
     }
   }
 
+  async function downloadQrSvg() {
+    setBusyAction('download-svg');
+    try {
+      const { design, logoPath, frameImagePath } = resolveDesignAndLogoUrl(qr, data.collectionDesign);
+      await downloadSingleQrSvg({ vaultUrl: qr.vaultUrl, design, logoPath, frameImagePath, qrName: qr.name, filenameBase: qr.name });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to download the QR SVG.'));
+    } finally {
+      setBusyAction('');
+    }
+  }
+
   async function persistOrder(uploadIds, nextUploads) {
     setData((current) => ({ ...current, uploads: nextUploads }));
     setBusyAction('reorder');
@@ -162,6 +174,7 @@ export default function QRDetail() {
           <a className="secondary-button" href={qr.vaultUrl} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Open</a>
           <button className="secondary-button" onClick={() => setShowDesignStudio(true)}><Palette size={18} /> Design QR Code</button>
           <button className="primary-button" onClick={downloadQr} disabled={busyAction === 'download'}><Download size={18} /> {busyAction === 'download' ? 'Preparing...' : 'QR PNG'}</button>
+          <button className="secondary-button" onClick={downloadQrSvg} disabled={busyAction === 'download-svg'}><FileImage size={18} /> {busyAction === 'download-svg' ? 'Preparing...' : 'QR SVG'}</button>
           <button className="danger-button" onClick={recycle} disabled={busyAction === 'recycle'}><Trash2 size={18} /> Recycle</button>
         </div>
       </div>

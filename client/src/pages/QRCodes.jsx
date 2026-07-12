@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Download, Palette, Plus, Search, Trash } from 'lucide-react';
+import { Download, FileImage, Palette, Plus, Search, Trash } from 'lucide-react';
 import { api, getErrorMessage } from '../api/http.js';
 import { useToast } from '../context/ToastContext.jsx';
 import Modal from '../components/Modal.jsx';
 import QRCanvas from '../components/QRCanvas.jsx';
 import QRDesignStudio from '../components/QRDesignStudio.jsx';
 import { resolveDesignAndLogoUrl } from '../utils/designHelpers.js';
-import { downloadSingleQrPng } from '../utils/qrExport.js';
+import { downloadSingleQrPng, downloadSingleQrSvg } from '../utils/qrExport.js';
 import { routes } from '../routes/paths.js';
 import { formatBytes, formatDate } from '../utils/format.js';
 import './QRCodes.css';
@@ -86,6 +86,18 @@ export default function QRCodes() {
     }
   }
 
+  async function downloadQrSvg(qr) {
+    setBusyAction(`download-svg-${qr._id}`);
+    try {
+      const { design, logoPath, frameImagePath } = resolveDesignAndLogoUrl(qr, qr.collectionDesign);
+      await downloadSingleQrSvg({ vaultUrl: qr.vaultUrl, design, logoPath, frameImagePath, qrName: qr.name, filenameBase: qr.name });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to download the QR SVG.'));
+    } finally {
+      setBusyAction('');
+    }
+  }
+
   return (
     <section className="page">
       <div className="page-header">
@@ -149,8 +161,11 @@ export default function QRCodes() {
                 <button className="icon-button" title="Design this QR" onClick={() => setDesigningQr(qr)}>
                   <Palette size={18} />
                 </button>
-                <button className="icon-button" title="Download QR" onClick={() => downloadQr(qr)} disabled={busyAction === `download-${qr._id}`}>
+                <button className="icon-button" title="Download PNG" onClick={() => downloadQr(qr)} disabled={busyAction === `download-${qr._id}`}>
                   {busyAction === `download-${qr._id}` ? <span className="spinner small-spinner" /> : <Download size={18} />}
+                </button>
+                <button className="icon-button" title="Download SVG" onClick={() => downloadQrSvg(qr)} disabled={busyAction === `download-svg-${qr._id}`}>
+                  {busyAction === `download-svg-${qr._id}` ? <span className="spinner small-spinner" /> : <FileImage size={18} />}
                 </button>
                 <button className="icon-button" title="Recycle QR" onClick={() => {
                   if (window.confirm('Recycle this QR?')) recycleQr(qr._id);

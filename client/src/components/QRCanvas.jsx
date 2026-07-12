@@ -9,54 +9,67 @@ import './QRCanvas.css';
  * design changes — this is the single source of truth for "what the QR
  * looks like", shared by the design studio, the QR detail page, and the
  * collection grid thumbnails.
+ *
+ * Loading the logo/frame images is kept in its own effect, separate from
+ * the render effect, and keyed only on the image *paths* — not the whole
+ * design object. Otherwise every keystroke on an unrelated slider (e.g.
+ * "QR size in frame") would re-fetch and re-decode images that haven't
+ * actually changed, which is what made those controls feel sluggish.
  */
 export default function QRCanvas({ data, design, logoPath, frameImagePath, qrName = '', qrPixelSize = 320, className = '' }) {
   const canvasRef = useRef(null);
   const [error, setError] = useState('');
+  const [logoImg, setLogoImg] = useState(null);
+  const [frameImg, setFrameImg] = useState(null);
   const designKey = JSON.stringify(design || {});
 
   useEffect(() => {
     let cancelled = false;
-    let revokeLogo = () => {};
-    let revokeFrame = () => {};
+    let revoke = () => {};
+    loadAuthenticatedImage(logoPath).then((result) => {
+      revoke = result.revoke;
+      if (!cancelled) setLogoImg(result.image);
+    });
+    return () => { cancelled = true; revoke(); };
+  }, [logoPath]);
 
-    async function run() {
+  useEffect(() => {
+    let cancelled = false;
+    let revoke = () => {};
+    loadAuthenticatedImage(frameImagePath).then((result) => {
+      revoke = result.revoke;
+      if (!cancelled) setFrameImg(result.image);
+    });
+    return () => { cancelled = true; revoke(); };
+  }, [frameImagePath]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    renderQrCanvas({
+      data: data || ' ',
+      design,
+      logoImageEl: logoImg,
+      frameImageEl: frameImg,
+      qrName,
+      qrPixelSize
+    }).then((rendered) => {
+      if (cancelled) return;
+      const target = canvasRef.current;
+      if (!target) return;
+      target.width = rendered.width;
+      target.height = rendered.height;
+      const ctx = target.getContext('2d');
+      ctx.clearRect(0, 0, target.width, target.height);
+      ctx.drawImage(rendered, 0, 0);
       setError('');
-      try {
-        const [{ image, revoke }, { image: frameImage, revoke: revokeFrameFn }] = await Promise.all([
-          loadAuthenticatedImage(logoPath),
-          loadAuthenticatedImage(frameImagePath)
-        ]);
-        revokeLogo = revoke;
-        revokeFrame = revokeFrameFn;
-        if (cancelled) { revoke(); revokeFrameFn(); return; }
+    }).catch((err) => {
+      if (!cancelled) setError(err.message || 'Could not render QR preview.');
+    });
 
-        const rendered = await renderQrCanvas({
-          data: data || ' ',
-          design,
-          logoImageEl: image,
-          frameImageEl: frameImage,
-          qrName,
-          qrPixelSize
-        });
-        if (cancelled) return;
-
-        const target = canvasRef.current;
-        if (!target) return;
-        target.width = rendered.width;
-        target.height = rendered.height;
-        const ctx = target.getContext('2d');
-        ctx.clearRect(0, 0, target.width, target.height);
-        ctx.drawImage(rendered, 0, 0);
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'Could not render QR preview.');
-      }
-    }
-
-    run();
-    return () => { cancelled = true; revokeLogo(); revokeFrame(); };
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, designKey, logoPath, frameImagePath, qrName, qrPixelSize]);
+  }, [data, designKey, logoImg, frameImg, qrName, qrPixelSize]);
 
   return (
     <div className={`qr-canvas-frame ${className}`}>

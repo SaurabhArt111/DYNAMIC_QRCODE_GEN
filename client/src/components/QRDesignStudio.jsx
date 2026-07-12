@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Circle, ImagePlus, Palette, RotateCcw, Save, Smartphone, Square, Trash2, UploadCloud, X } from 'lucide-react';
+import { Check, Circle, Download, FileImage, ImagePlus, Palette, RotateCcw, Save, Smartphone, Square, Trash2, UploadCloud, X } from 'lucide-react';
 import Modal from './Modal.jsx';
 import QRCanvas from './QRCanvas.jsx';
 import { api, getErrorMessage } from '../api/http.js';
@@ -7,12 +7,34 @@ import {
   COLOR_SWATCHES, CORNER_PRESETS, DOT_TYPES, FRAME_STYLES, FRAME_STYLES_WITH_TEXT, FRAME_TEXT_MODES, resolveEffectiveDesign
 } from '../utils/qrEngine.js';
 import { loadAuthenticatedImage, resolveDesignAndLogoUrl } from '../utils/designHelpers.js';
+import { downloadSingleQrPng, downloadSingleQrSvg } from '../utils/qrExport.js';
 import './QRDesignStudio.css';
 
 // Short sample text used for every preset swatch preview so the pattern /
 // corner / frame shape reads clearly at a glance (the real vault URL is only
 // used for the one big "your QR" preview on the left).
 const SWATCH_SAMPLE_DATA = 'DESIGN-PREVIEW';
+
+// Keeps a slider feeling instantly responsive (the label + thumb update on
+// every tick) while debouncing the actual commit into `design` state, which
+// is what triggers the (relatively expensive) canvas re-render across every
+// visible preview. Without this, dragging a slider re-renders every open
+// preview on every single tick and feels sluggish.
+function useDebouncedField(committedValue, onCommit, delay = 50) {
+  const [local, setLocal] = useState(committedValue);
+  const timerRef = useRef(null);
+
+  useEffect(() => { setLocal(committedValue); }, [committedValue]);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  function set(next) {
+    setLocal(next);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onCommit(next), delay);
+  }
+
+  return [local, set];
+}
 
 function ImageThumb({ file, path, alt = 'Preview' }) {
   const [src, setSrc] = useState(null);
@@ -45,11 +67,23 @@ function ImageThumb({ file, path, alt = 'Preview' }) {
   return <img src={src} alt={alt} />;
 }
 
-function ColorRow({ label, value, onChange }) {
+function ColorRow({ label, value, onChange, allowTransparent = false }) {
+  const isTransparent = value === 'transparent';
   return (
     <div className="qds-color-row">
       <span className="qds-field-label">{label}</span>
       <div className="qds-swatches">
+        {allowTransparent && (
+          <button
+            type="button"
+            className={`qds-swatch qds-swatch-transparent${isTransparent ? ' is-active' : ''}`}
+            onClick={() => onChange('transparent')}
+            aria-label="Transparent"
+            title="Transparent"
+          >
+            {isTransparent && <Check size={14} color="#17202A" />}
+          </button>
+        )}
         {COLOR_SWATCHES.map((swatch) => (
           <button
             key={swatch}
@@ -62,9 +96,9 @@ function ColorRow({ label, value, onChange }) {
             {value?.toUpperCase() === swatch && <Check size={14} color={swatch === '#FFFFFF' ? '#17202A' : '#fff'} />}
           </button>
         ))}
-        <label className="qds-swatch qds-swatch-custom" style={{ background: value || '#fff' }}>
+        <label className="qds-swatch qds-swatch-custom" style={{ background: isTransparent ? '#fff' : (value || '#fff') }}>
           <Palette size={14} />
-          <input type="color" value={value || '#000000'} onChange={(event) => onChange(event.target.value)} />
+          <input type="color" value={isTransparent ? '#000000' : (value || '#000000')} onChange={(event) => onChange(event.target.value)} />
         </label>
       </div>
     </div>
@@ -130,6 +164,19 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
   function updateDesign(patch) {
     setDesign((prev) => ({ ...prev, ...patch }));
   }
+
+  const [logoSizeLocal, setLogoSizeLocal] = useDebouncedField(
+    design.logoSize ?? 0.22,
+    (value) => updateDesign({ logoSize: value })
+  );
+  const [frameImageScaleLocal, setFrameImageScaleLocal] = useDebouncedField(
+    design.frameImageScale ?? 0.55,
+    (value) => updateDesign({ frameImageScale: value })
+  );
+  const [frameImageOffsetYLocal, setFrameImageOffsetYLocal] = useDebouncedField(
+    design.frameImageOffsetY ?? 0,
+    (value) => updateDesign({ frameImageOffsetY: value })
+  );
 
   function handleLogoPick(event) {
     const file = event.target.files?.[0];
@@ -207,6 +254,20 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
   }
 
   const showResetOption = isQrScope && !!qr?.collectionId;
+  const [downloading, setDownloading] = useState('');
+
+  async function handleQuickDownload(format) {
+    if (!isQrScope || !qr?.vaultUrl) return;
+    setDownloading(format);
+    try {
+      const fn = format === 'svg' ? downloadSingleQrSvg : downloadSingleQrPng;
+      await fn({ vaultUrl: qr.vaultUrl, design, logoPath: effectiveLogoPath, frameImagePath: effectiveFrameImagePath, qrName: previewQrName, filenameBase: qr.name });
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to download.'));
+    } finally {
+      setDownloading('');
+    }
+  }
 
   return (
     <Modal
@@ -236,6 +297,16 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
             <button className="secondary-button qds-reset-button" onClick={handleResetToCollection} disabled={resetting || saving}>
               <RotateCcw size={16} /> {resetting ? 'Resetting…' : 'Use collection design instead'}
             </button>
+          )}
+          {isQrScope && (
+            <div className="qds-quick-download">
+              <button className="secondary-button" onClick={() => handleQuickDownload('png')} disabled={!!downloading}>
+                {downloading === 'png' ? <span className="spinner small-spinner" /> : <Download size={16} />} PNG
+              </button>
+              <button className="secondary-button" onClick={() => handleQuickDownload('svg')} disabled={!!downloading}>
+                {downloading === 'svg' ? <span className="spinner small-spinner" /> : <FileImage size={16} />} SVG
+              </button>
+            </div>
           )}
         </div>
 
@@ -344,14 +415,14 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
                 {design.frameStyle === 'custom-image' && hasCustomFrameImage && (
                   <>
                     <div className="qds-range-field">
-                      <span className="qds-field-label">QR size in frame ({Math.round((design.frameImageScale ?? 0.55) * 100)}%)</span>
+                      <span className="qds-field-label">QR size in frame ({Math.round(frameImageScaleLocal * 100)}%)</span>
                       <input
                         type="range"
                         min="0.2"
                         max="0.9"
                         step="0.01"
-                        value={design.frameImageScale ?? 0.55}
-                        onChange={(event) => updateDesign({ frameImageScale: Number(event.target.value) })}
+                        value={frameImageScaleLocal}
+                        onChange={(event) => setFrameImageScaleLocal(Number(event.target.value))}
                       />
                     </div>
                     <div className="qds-range-field">
@@ -361,10 +432,55 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
                         min="-0.35"
                         max="0.35"
                         step="0.01"
-                        value={design.frameImageOffsetY ?? 0}
-                        onChange={(event) => updateDesign({ frameImageOffsetY: Number(event.target.value) })}
+                        value={frameImageOffsetYLocal}
+                        onChange={(event) => setFrameImageOffsetYLocal(Number(event.target.value))}
                       />
                     </div>
+
+                    <label className="qds-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={!!design.frameImageShowCaption}
+                        onChange={(event) => updateDesign({ frameImageShowCaption: event.target.checked })}
+                      />
+                      Add a caption on top of my frame image
+                    </label>
+
+                    {design.frameImageShowCaption && (
+                      <>
+                        <span className="qds-field-label">Caption</span>
+                        <div className="qds-radio-row">
+                          {FRAME_TEXT_MODES.map((mode) => (
+                            <label key={mode.id} className="qds-radio">
+                              <input
+                                type="radio"
+                                name="frameImageTextMode"
+                                checked={(design.frameTextMode || 'custom') === mode.id}
+                                onChange={() => updateDesign({ frameTextMode: mode.id })}
+                              />
+                              {mode.label}
+                            </label>
+                          ))}
+                        </div>
+
+                        {(design.frameTextMode || 'custom') === 'custom' ? (
+                          <div className="field">
+                            <label>Caption text</label>
+                            <input
+                              type="text"
+                              maxLength={20}
+                              value={design.frameText || ''}
+                              onChange={(event) => updateDesign({ frameText: event.target.value })}
+                              placeholder="SCAN ME!"
+                            />
+                          </div>
+                        ) : (
+                          <p className="field-hint">Each QR will show its own name as the caption.</p>
+                        )}
+                        <ColorRow label="Caption color" value={design.frameColor} onChange={(frameColor) => updateDesign({ frameColor })} />
+                        <ColorRow label="Text color" value={design.frameTextColor} onChange={(frameTextColor) => updateDesign({ frameTextColor })} />
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -411,7 +527,13 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
                 </div>
 
                 <ColorRow label="Code color" value={design.dotsColor} onChange={(dotsColor) => updateDesign({ dotsColor })} />
-                <ColorRow label="Background color" value={design.backgroundColor} onChange={(backgroundColor) => updateDesign({ backgroundColor })} />
+                <ColorRow label="Background color" value={design.backgroundColor} onChange={(backgroundColor) => updateDesign({ backgroundColor })} allowTransparent />
+                {design.backgroundColor === 'transparent' && design.frameStyle !== 'none' && design.frameStyle !== 'custom-image' && (
+                  <p className="field-hint">
+                    A transparent background only shows through with Frame style "None" — the other
+                    built-in frames sit on a solid card.
+                  </p>
+                )}
               </div>
             )}
 
@@ -436,14 +558,14 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
                 </div>
 
                 <div className="qds-range-field">
-                  <span className="qds-field-label">Logo size ({Math.round((design.logoSize || 0.22) * 100)}%)</span>
+                  <span className="qds-field-label">Logo size ({Math.round(logoSizeLocal * 100)}%)</span>
                   <input
                     type="range"
                     min="0.1"
                     max="0.35"
                     step="0.01"
-                    value={design.logoSize || 0.22}
-                    onChange={(event) => updateDesign({ logoSize: Number(event.target.value) })}
+                    value={logoSizeLocal}
+                    onChange={(event) => setLogoSizeLocal(Number(event.target.value))}
                   />
                 </div>
 

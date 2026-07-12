@@ -1,12 +1,13 @@
-// Builds the actual downloadable artifacts (single PNG, a ZIP of PNGs, or a
-// PDF sheet) by rendering each QR through the design engine client-side, so
-// the exact same "Design QR Code" look shown in the preview is what gets
+// Builds the actual downloadable artifacts (single PNG/SVG, a ZIP, or a PDF
+// sheet) by rendering each QR through the design engine client-side, so the
+// exact same "Design QR Code" look shown in the preview is what gets
 // downloaded — no separate server-side renderer to keep in sync.
 
 import JSZip from 'jszip';
 import { jsPDF } from 'jspdf';
 import { api } from '../api/http.js';
 import { renderQrCanvas, canvasToBlob, FRAME_STYLES_WITH_TEXT } from './qrEngine.js';
+import { renderQrSvgString, imageElementToDataUrl } from './qrSvg.js';
 import { loadAuthenticatedImage, triggerBlobDownload, safeFileName } from './designHelpers.js';
 
 const EXPORT_QR_PIXEL_SIZE = 640;
@@ -62,14 +63,44 @@ export async function downloadSingleQrPng({ vaultUrl, design, logoPath, frameIma
 }
 
 /**
+ * Renders one QR as a true vector SVG (real paths/shapes for the QR itself,
+ * finder patterns, and any built-in frame chrome/caption — only a logo or a
+ * custom uploaded frame image, if present, are embedded as raster data)
+ * and triggers a download.
+ */
+export async function downloadSingleQrSvg({ vaultUrl, design, logoPath, frameImagePath, qrName, filenameBase }) {
+  const [{ image, revoke }, { image: frameImage, revoke: revokeFrame }] = await Promise.all([
+    loadAuthenticatedImage(logoPath),
+    loadAuthenticatedImage(frameImagePath)
+  ]);
+  try {
+    const svgString = renderQrSvgString({
+      data: vaultUrl,
+      design,
+      logoDataUrl: imageElementToDataUrl(image),
+      frameImageDataUrl: imageElementToDataUrl(frameImage),
+      frameImageNaturalSize: frameImage ? { width: frameImage.naturalWidth, height: frameImage.naturalHeight } : null,
+      qrName: qrName ?? filenameBase,
+      qrPixelSize: EXPORT_QR_PIXEL_SIZE
+    });
+    const blob = new Blob([svgString], { type: 'image/svg+xml' });
+    triggerBlobDownload(blob, `${safeFileName(filenameBase)}.svg`);
+  } finally {
+    revoke();
+    revokeFrame();
+  }
+}
+
+/**
  * Renders every QR in `qrs` using the SAME design (the collection's default),
  * so a bulk export always looks like one consistent, on-brand batch — and
- * zips the results. When the design's caption is set to use each QR's own
- * name, every file in the ZIP gets its own caption automatically.
+ * zips the results as either PNGs or true-vector SVGs. When the design's
+ * caption is set to use each QR's own name, every file in the ZIP gets its
+ * own caption automatically.
  *
  * `qrs` items need: { name, vaultUrl }.
  */
-export async function downloadCollectionZip({ qrs, design, logoPath, frameImagePath, collectionName }) {
+export async function downloadCollectionZip({ qrs, design, logoPath, frameImagePath, collectionName, format = 'png' }) {
   const [{ image, revoke }, { image: frameImage, revoke: revokeFrame }] = await Promise.all([
     loadAuthenticatedImage(logoPath),
     loadAuthenticatedImage(frameImagePath)
@@ -77,26 +108,43 @@ export async function downloadCollectionZip({ qrs, design, logoPath, frameImageP
   try {
     const zip = new JSZip();
     const usedNames = new Map();
+    const logoDataUrl = format === 'svg' ? imageElementToDataUrl(image) : null;
+    const frameImageDataUrl = format === 'svg' ? imageElementToDataUrl(frameImage) : null;
+    const frameImageNaturalSize = frameImage ? { width: frameImage.naturalWidth, height: frameImage.naturalHeight } : null;
 
     for (const qr of qrs) {
-      const canvas = await renderQrCanvas({
-        data: qr.vaultUrl,
-        design,
-        logoImageEl: image,
-        frameImageEl: frameImage,
-        qrName: qr.name,
-        qrPixelSize: EXPORT_QR_PIXEL_SIZE
-      });
-      const blob = await canvasToBlob(canvas);
       const base = safeFileName(qr.name);
       const count = usedNames.get(base) || 0;
       usedNames.set(base, count + 1);
-      const filename = `${base}${count ? `-${count + 1}` : ''}.png`;
-      zip.file(filename, blob);
+      const suffix = count ? `-${count + 1}` : '';
+
+      if (format === 'svg') {
+        const svgString = renderQrSvgString({
+          data: qr.vaultUrl,
+          design,
+          logoDataUrl,
+          frameImageDataUrl,
+          frameImageNaturalSize,
+          qrName: qr.name,
+          qrPixelSize: EXPORT_QR_PIXEL_SIZE
+        });
+        zip.file(`${base}${suffix}.svg`, svgString);
+      } else {
+        const canvas = await renderQrCanvas({
+          data: qr.vaultUrl,
+          design,
+          logoImageEl: image,
+          frameImageEl: frameImage,
+          qrName: qr.name,
+          qrPixelSize: EXPORT_QR_PIXEL_SIZE
+        });
+        const blob = await canvasToBlob(canvas);
+        zip.file(`${base}${suffix}.png`, blob);
+      }
     }
 
     const zipBlob = await zip.generateAsync({ type: 'blob' });
-    triggerBlobDownload(zipBlob, `${safeFileName(collectionName, 'collection')}-qr-codes.zip`);
+    triggerBlobDownload(zipBlob, `${safeFileName(collectionName, 'collection')}-qr-codes-${format}.zip`);
   } finally {
     revoke();
     revokeFrame();
