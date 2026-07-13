@@ -32,12 +32,12 @@
 .coll-qr-card-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .coll-qr-card-thumb {
   width: 60px;
-  height: 60px;
+  min-height: 60px;
   flex-shrink: 0;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -304,12 +304,6 @@
   display: grid;
   gap: 12px;
   box-shadow: var(--shadow);
-}
-
-.coll-qr-card-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
 .coll-qr-card-thumb {

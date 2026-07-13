@@ -7,7 +7,8 @@ const defaultTheme = 'linen';
 export const themes = [
   { id: 'linen', label: 'Linen' },
   { id: 'harbor', label: 'Harbor' },
-  { id: 'grove', label: 'Grove' }
+  { id: 'grove', label: 'Grove' },
+  { id: 'dark', label: 'Dark' }
 ];
 
 export function ThemeProvider({ children }) {

@@ -150,12 +150,24 @@ export default function QRCodes() {
                   <span>{qr.token}</span>
                 </div>
               </div>
-              <p>{qr.description || 'No description'}</p>
-              <dl>
-                <div><dt>Size</dt><dd>{formatBytes(qr.sizeBytes)}</dd></div>
-                <div><dt>Status</dt><dd>{qr.status}</dd></div>
-                <div><dt>Collection</dt><dd>{qr.collectionName || 'Standalone'}</dd></div>
-                <div><dt>Updated</dt><dd>{formatDate(qr.updatedAt)}</dd></div>
+              <p className="qr-card-description">{qr.description || 'No description'}</p>
+              <dl className="qr-card-meta">
+                <div className="qr-card-meta-item">
+                  <dt>Size</dt>
+                  <dd>{formatBytes(qr.sizeBytes)}</dd>
+                </div>
+                <div className="qr-card-meta-item">
+                  <dt>Status</dt>
+                  <dd>{qr.status}</dd>
+                </div>
+                <div className="qr-card-meta-item">
+                  <dt>Collection</dt>
+                  <dd>{qr.collectionName || 'Standalone'}</dd>
+                </div>
+                <div className="qr-card-meta-item">
+                  <dt>Updated</dt>
+                  <dd>{formatDate(qr.updatedAt)}</dd>
+                </div>
               </dl>
               <div className="button-row">
                 <Link className="primary-button" to={routes.qrcode(qr._id)}>Manage</Link>
@@ -167,7 +179,9 @@ export default function QRCodes() {
                 </button>
                 <button className="icon-button" title="Recycle QR" onClick={() => {
                   if (window.confirm('Recycle this QR?')) recycleQr(qr._id);
-                }}><Trash size={18} style={{ color: 'red' }} /></button>
+                }}>
+                  <Trash size={18} style={{ color: 'red' }} />
+                </button>
               </div>
             </article>
           );

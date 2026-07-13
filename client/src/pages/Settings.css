@@ -72,7 +72,7 @@
 
 .theme-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
 
@@ -103,8 +103,11 @@
 
 @media (max-width: 900px) {
 
-  .settings-grid,
-  .theme-grid {
+  .settings-grid {
     grid-template-columns: 1fr;
+  }
+
+  .theme-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }

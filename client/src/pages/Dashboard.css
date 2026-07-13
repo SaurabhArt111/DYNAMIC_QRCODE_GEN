@@ -19,7 +19,7 @@
 }
 
 .metric-card svg {
-  color: var(--primary);
+  color: var(--text);
 }
 
 .metric-card span {

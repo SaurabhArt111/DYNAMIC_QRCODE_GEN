@@ -64,6 +64,19 @@
   place-items: center;
 }
 
+.qr-card-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+.qr-card-meta-item {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+}
+
 .qr-card strong {
   display: block;
   font-size: 1.05rem;
@@ -235,5 +248,10 @@
   .qr-pagination-buttons {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .qr-grid {
+    grid-template-columns: 1fr;
+    margin: 0;
   }
 }
