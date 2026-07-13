@@ -70,6 +70,7 @@ export const DEFAULT_DESIGN = Object.freeze({
   frameText: 'SCAN ME!',
   frameColor: '#0F8A5F',
   frameTextColor: '#FFFFFF',
+  frameTextBackgroundTransparent: false,
   frameImageScale: 0.55,
   frameImageOffsetY: 0,
   frameImageCaptionSize: 0.13,
@@ -454,16 +455,20 @@ export function drawFrameOverlay(ctx, frameStyle, layout, design, qrName = '') {
   switch (frameStyle) {
     case 'bottom-bar': {
       const barY = layout.pad + qrSize;
-      ctx.fillStyle = frameColor;
-      roundRectPath(ctx, 0, barY, w, layout.barHeight, [0, 0, Math.round(qrSize * 0.05), Math.round(qrSize * 0.05)]);
-      ctx.fill();
+      if (!design.frameTextBackgroundTransparent) {
+        ctx.fillStyle = frameColor;
+        roundRectPath(ctx, 0, barY, w, layout.barHeight, [0, 0, Math.round(qrSize * 0.05), Math.round(qrSize * 0.05)]);
+        ctx.fill();
+      }
       drawCenteredText(ctx, text, w / 2, barY + layout.barHeight / 2, layout.barHeight * 0.4, textColor);
       break;
     }
     case 'top-bar': {
-      ctx.fillStyle = frameColor;
-      roundRectPath(ctx, 0, 0, w, layout.barHeight, [Math.round(qrSize * 0.05), Math.round(qrSize * 0.05), 0, 0]);
-      ctx.fill();
+      if (!design.frameTextBackgroundTransparent) {
+        ctx.fillStyle = frameColor;
+        roundRectPath(ctx, 0, 0, w, layout.barHeight, [Math.round(qrSize * 0.05), Math.round(qrSize * 0.05), 0, 0]);
+        ctx.fill();
+      }
       drawCenteredText(ctx, text, w / 2, layout.barHeight / 2, layout.barHeight * 0.4, textColor);
       break;
     }
@@ -471,9 +476,11 @@ export function drawFrameOverlay(ctx, frameStyle, layout, design, qrName = '') {
       const pillY = layout.pad + qrSize + layout.pillGap;
       const pillW = w * 0.66;
       const pillX = (w - pillW) / 2;
-      ctx.fillStyle = frameColor;
-      roundRectPath(ctx, pillX, pillY, pillW, layout.pillHeight, layout.pillHeight / 2);
-      ctx.fill();
+      if (!design.frameTextBackgroundTransparent) {
+        ctx.fillStyle = frameColor;
+        roundRectPath(ctx, pillX, pillY, pillW, layout.pillHeight, layout.pillHeight / 2);
+        ctx.fill();
+      }
       drawCenteredText(ctx, text, w / 2, pillY + layout.pillHeight / 2, layout.pillHeight * 0.42, textColor);
       break;
     }
@@ -488,9 +495,11 @@ export function drawFrameOverlay(ctx, frameStyle, layout, design, qrName = '') {
       ctx.fill();
       const barY = layout.bezel + layout.topBar + qrSize;
       const barH = layout.bottomBar - layout.bezel * 0.5;
-      ctx.fillStyle = frameColor;
-      roundRectPath(ctx, layout.bezel * 0.5, barY, w - layout.bezel, barH, Math.round(qrSize * 0.08));
-      ctx.fill();
+      if (!design.frameTextBackgroundTransparent) {
+        ctx.fillStyle = frameColor;
+        roundRectPath(ctx, layout.bezel * 0.5, barY, w - layout.bezel, barH, Math.round(qrSize * 0.08));
+        ctx.fill();
+      }
       drawCenteredText(ctx, text, w / 2, barY + barH / 2, qrSize * 0.07, textColor);
       break;
     }
@@ -514,9 +523,11 @@ export function drawFrameOverlay(ctx, frameStyle, layout, design, qrName = '') {
         const pillW = w * 0.7;
         const pillX = (w - pillW) / 2;
         const pillY = h - pillHeight - qrSize * captionOffsetMul;
-        ctx.fillStyle = frameColor;
-        roundRectPath(ctx, pillX, pillY, pillW, pillHeight, pillHeight / 2);
-        ctx.fill();
+        if (!design.frameTextBackgroundTransparent) {
+          ctx.fillStyle = frameColor;
+          roundRectPath(ctx, pillX, pillY, pillW, pillHeight, pillHeight / 2);
+          ctx.fill();
+        }
         drawCenteredText(ctx, text, w / 2, pillY + pillHeight / 2, pillHeight * 0.4, textColor);
       }
       break;

@@ -206,8 +206,8 @@
 }
 
 .qds-logo-preview {
-  width: 72px;
-  height: 72px;
+  width: 100px;
+  height: 100px;
   flex-shrink: 0;
   border: 1.5px dashed var(--border);
   border-radius: var(--radius-sm);
@@ -216,6 +216,7 @@
   place-items: center;
   color: var(--muted);
   overflow: hidden;
+  padding: 10px;
 }
 
 .qds-logo-preview img {
@@ -239,6 +240,12 @@
 .qds-range-field input[type='range'] {
   width: 100%;
   accent-color: var(--primary);
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.88rem;
 }
 
 .qds-checkbox {

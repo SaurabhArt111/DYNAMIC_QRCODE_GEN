@@ -41,7 +41,7 @@ function ImageThumb({ file, path, alt = 'Preview' }) {
 
   useEffect(() => {
     let cancelled = false;
-    let revoke = () => {};
+    let revoke = () => { };
 
     async function run() {
       if (file) {
@@ -227,7 +227,7 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
         formData.append('logo', logoFile);
         await api.post(`${basePath}/design/logo`, formData);
       } else if (removeLogo) {
-        await api.delete(`${basePath}/design/logo`).catch(() => {});
+        await api.delete(`${basePath}/design/logo`).catch(() => { });
       }
 
       if (frameImageFile) {
@@ -235,7 +235,7 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
         formData.append('frameImage', frameImageFile);
         await api.post(`${basePath}/design/frame-image`, formData);
       } else if (removeFrameImage) {
-        await api.delete(`${basePath}/design/frame-image`).catch(() => {});
+        await api.delete(`${basePath}/design/frame-image`).catch(() => { });
       }
 
       await onSaved?.();
@@ -285,8 +285,7 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
     >
       {!isQrScope && (
         <p className="qds-scope-note">
-          This look applies to every QR code in this collection that hasn't been given its own custom
-          design. Downloading the collection as a ZIP or PDF will use this design for all of them.
+          This look applies to every QR code in this collection that hasn't been given its own custom design.
         </p>
       )}
       {isQrScope && qr?.collectionId && !qr?.useCustomDesign && (
@@ -388,6 +387,14 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
                         PDF where every code needs its own label.
                       </p>
                     )}
+                    <label className="qds-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={!!design.frameTextBackgroundTransparent}
+                        onChange={(event) => updateDesign({ frameTextBackgroundTransparent: event.target.checked })}
+                      />
+                      Transparent caption background
+                    </label>
                     <ColorRow label="Frame color" value={design.frameColor} onChange={(frameColor) => updateDesign({ frameColor })} />
                     <ColorRow label="Text color" value={design.frameTextColor} onChange={(frameTextColor) => updateDesign({ frameTextColor })} />
                   </>
@@ -485,6 +492,14 @@ export default function QRDesignStudio({ scope, qr, collection, onClose, onSaved
                         ) : (
                           <p className="field-hint">Each QR will show its own name as the caption.</p>
                         )}
+                        <label className="qds-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={!!design.frameTextBackgroundTransparent}
+                            onChange={(event) => updateDesign({ frameTextBackgroundTransparent: event.target.checked })}
+                          />
+                          Transparent caption background
+                        </label>
                         <ColorRow label="Caption color" value={design.frameColor} onChange={(frameColor) => updateDesign({ frameColor })} />
                         <ColorRow label="Text color" value={design.frameTextColor} onChange={(frameTextColor) => updateDesign({ frameTextColor })} />
                         <div className="qds-range-field">

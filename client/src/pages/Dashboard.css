@@ -4,8 +4,8 @@
   gap: 14px;
 }
 
-.metric-grid-3 {
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
+.metric-grid-4 {
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
 }
 
 .metric-card {
@@ -120,13 +120,13 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .metric-grid-3 {
+  .metric-grid-4 {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (max-width: 620px) {
-  .metric-grid, .metric-grid-3 {
+  .metric-grid, .metric-grid-4 {
     grid-template-columns: 1fr 1fr;
   }
 

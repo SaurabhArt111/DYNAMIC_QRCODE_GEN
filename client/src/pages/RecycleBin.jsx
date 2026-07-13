@@ -188,7 +188,7 @@ export default function RecycleBin() {
         <div className="recycle-bulk-row">
           <button className="secondary-button" onClick={toggleSelectAll} disabled={!items.length}>
             {allVisibleSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-            {allVisibleSelected ? 'Clear visible' : 'Select visible'}
+            {allVisibleSelected ? 'Clear Selection' : 'Select All'}
           </button>
           <span className="recycle-selection-note">{selectedIds.length} selected</span>
           <button className="secondary-button" onClick={restoreSelected} disabled={!selectedIds.length || busy === 'restore-many'}>

@@ -22,6 +22,7 @@ export default function Dashboard() {
   const cards = [
     ['Total QR Codes', data?.totalQrCodes ?? 0, QrCode],
     ['Active QR Codes', data?.activeQrCodes ?? 0, Activity],
+    ['Total Collections', data?.totalCollections ?? 0, Database],
     ['Storage Usage', formatBytes(data?.storageUsageBytes || 0), Database]
   ];
 
@@ -33,7 +34,7 @@ export default function Dashboard() {
           <p>Operational overview for every dynamic QR in the vault.</p>
         </div>
       </div>
-      <div className="metric-grid metric-grid-3">
+      <div className="metric-grid metric-grid-4">
         {cards.map(([label, value, Icon]) => (
           <article className="metric-card" key={label}>
             <Icon size={22} />

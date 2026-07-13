@@ -1,42 +1,42 @@
 :root {
   color-scheme: light;
 
-  --bg: #f4f1ec;
-  --bg-grad-1: #f6f2ea;
-  --bg-grad-2: #eef0ec;
+  --bg: #f7efe8;
+  --bg-grad-1: #fcf7f2;
+  --bg-grad-2: #efe2d8;
 
-  --surface: #ffffff;
-  --surface-2: #f7f5f1;
-  --surface-border: rgba(23, 20, 18, 0.09);
+  --surface: #fffdfa;
+  --surface-2: #f8efe8;
+  --surface-border: rgba(74, 20, 27, 0.1);
 
-  --glass-bg: rgba(255, 255, 255, 0.6);
-  --glass-bg-strong: rgba(255, 255, 255, 0.78);
-  --glass-border: rgba(255, 255, 255, 0.7);
-  --glass-border-soft: rgba(23, 32, 42, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.9);
-  --glass-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 45%);
+  --glass-bg: rgba(255, 253, 250, 0.72);
+  --glass-bg-strong: rgba(255, 253, 250, 0.84);
+  --glass-border: rgba(255, 255, 255, 0.78);
+  --glass-border-soft: rgba(74, 20, 27, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.92);
+  --glass-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0) 45%);
   --glass-blur: blur(20px) saturate(160%);
 
-  --text: #1c1815;
-  --muted: #706558;
-  --border: rgba(28, 24, 21, 0.12);
+  --text: #241114;
+  --muted: #7a5c5a;
+  --border: rgba(74, 20, 27, 0.12);
 
   --primary: #4A141B;
-  --primary-dark: #2a0b10;
-  --primary-light: #7a2530;
+  --primary-dark: #2d0d12;
+  --primary-light: #7a2534;
   --primary-rgb: 74, 20, 27;
-  --accent: #c2410c;
-  --accent-rgb: 194, 65, 12;
+  --accent: #b85f2a;
+  --accent-rgb: 184, 95, 42;
   --danger: #b42318;
   --success: #0f8a5f;
   --warning: #b4790a;
   --info: #1d6fa5;
 
-  --shadow-sm: 0 1px 2px rgba(28, 24, 21, 0.06), 0 1px 1px rgba(28, 24, 21, 0.04);
-  --shadow: 0 2px 6px rgba(28, 24, 21, 0.05), 0 12px 28px rgba(28, 24, 21, 0.08);
-  --shadow-hover: 0 4px 10px rgba(28, 24, 21, 0.07), 0 20px 40px rgba(28, 24, 21, 0.12);
-  --shadow-glass: 0 12px 36px rgba(23, 32, 42, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.4);
-  --shadow-glass-hover: 0 20px 54px rgba(23, 32, 42, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+  --shadow-sm: 0 1px 2px rgba(74, 20, 27, 0.06), 0 1px 1px rgba(74, 20, 27, 0.04);
+  --shadow: 0 2px 6px rgba(74, 20, 27, 0.05), 0 12px 28px rgba(74, 20, 27, 0.08);
+  --shadow-hover: 0 4px 10px rgba(74, 20, 27, 0.07), 0 20px 40px rgba(74, 20, 27, 0.12);
+  --shadow-glass: 0 12px 36px rgba(74, 20, 27, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+  --shadow-glass-hover: 0 20px 54px rgba(74, 20, 27, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.76), inset 0 0 0 1px rgba(255, 255, 255, 0.46);
 
   --radius-sm: 10px;
   --radius-md: 14px;
@@ -268,9 +268,6 @@ a {
   transform: translateY(-2px);
 }
 
-/* Reserved for things genuinely overlaid on top of other content (menus,
-   floating toolbars) — real translucency + blur, used sparingly and on
-   purpose rather than as the default for every card. */
 .glass-overlay {
   position: relative;
   background: var(--glass-shine), var(--glass-bg-strong);
@@ -384,6 +381,7 @@ a {
 }
 
 .danger-button {
+  margin-top: 0.5rem;
   background: linear-gradient(155deg, #d1483a, var(--danger) 55%, #8a1a10);
   color: #fff;
   box-shadow: 0 1px 2px rgba(180, 35, 24, 0.2), 0 8px 20px rgba(180, 35, 24, 0.28);
@@ -405,7 +403,7 @@ a {
 
 .icon-button:hover:not(:disabled) {
   border-color: rgba(var(--primary-rgb), 0.4);
-  color: var(--primary);
+  color: var(--muted);
   transform: translateY(-1px);
 }
 
