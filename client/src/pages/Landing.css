@@ -26,7 +26,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: var(--primary);
+  color: #4A141B;
   font-weight: 900;
   font-size: 1rem;
 }
@@ -47,7 +47,7 @@
 
 .landing-kicker {
   margin: 0;
-  color: var(--accent);
+  color: #7a2534;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.8rem;
@@ -55,6 +55,7 @@
 }
 
 .landing-copy h1 {
+  color: #4A141B;
   margin: 0;
   max-width: 12ch;
   font-size: clamp(2.8rem, 8vw, 5.8rem);
@@ -64,7 +65,7 @@
 .landing-summary {
   margin: 0;
   max-width: 62ch;
-  color: var(--muted);
+  color: #4A141B;
   font-size: 1.02rem;
   line-height: 1.7;
 }
@@ -95,16 +96,17 @@
 }
 
 .landing-feature svg {
-  color: var(--primary);
+  color: #4A141B;
 }
 
 .landing-feature strong {
   font-size: 1rem;
+  color: #4A141B;
 }
 
 .landing-feature p {
   margin: 0;
-  color: var(--muted);
+  color: #7a2534;
   line-height: 1.6;
   font-size: 0.9rem;
 }

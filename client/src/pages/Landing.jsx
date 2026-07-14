@@ -3,7 +3,7 @@ import { ArrowRight, FolderTree, Lock, QrCode, ShieldCheck } from 'lucide-react'
 import { routes } from '../routes/paths.js';
 import './Landing.css';
 
-const appName = import.meta.env.VITE_APP_NAME || 'DynamicVault QR';
+const appName = import.meta.env.VITE_APP_NAME || 'Dynamic QR';
 
 const features = [
   {

@@ -312,7 +312,7 @@ a {
 }
 
 .back-btn:hover {
-  color: var(--primary);
+  color: var(--text);
   transform: translateX(-2px);
 }
 
