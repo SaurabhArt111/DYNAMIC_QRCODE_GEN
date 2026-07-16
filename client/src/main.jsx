@@ -3,8 +3,10 @@ import { createRoot } from 'react-dom/client';
 import {
   createBrowserRouter,
   RouterProvider,
-  Navigate
+  Navigate,
+  useRouteError
 } from 'react-router-dom';
+import { AlertOctagon, RefreshCw } from 'lucide-react';
 
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
@@ -33,6 +35,31 @@ const RecycleBin = lazy(() => import('./pages/RecycleBin.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Viewer = lazy(() => import('./pages/Viewer.jsx'));
 const NotFound = lazy(() => import('./pages/NotFound.jsx'));
+
+function RouteErrorBoundary() {
+  const error = useRouteError();
+
+  return (
+    <div className="error-boundary">
+      <div className="error-boundary-panel glass-card">
+        <AlertOctagon size={40} />
+        <h1>Navigation error</h1>
+        <p>
+          {error?.message ||
+            'Unable to load this page right now. Refresh the app or try again later.'}
+        </p>
+        <button
+          type="button"
+          className="primary-button"
+          onClick={() => window.location.reload()}
+        >
+          <RefreshCw size={16} />
+          Reload the app
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function RouteLoading() {
   return (
@@ -83,6 +110,7 @@ const router = createBrowserRouter(
           <App />
         </ProtectedRoute>
       ),
+      errorElement: <RouteErrorBoundary />,
       children: [
         { index: true, element: <Dashboard /> },
         { path: 'collections', element: <Collections /> },
@@ -95,7 +123,8 @@ const router = createBrowserRouter(
     },
     {
       path: '*',
-      element: <NotFound />
+      element: <NotFound />,
+      errorElement: <RouteErrorBoundary />
     }
   ],
   {
