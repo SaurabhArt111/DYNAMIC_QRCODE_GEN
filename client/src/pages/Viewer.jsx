@@ -210,7 +210,7 @@ export default function Viewer() {
                   <object className="pdf-viewer-frame" data={src} type="application/pdf" onLoad={() => setFileLoading(false)}>
                     <div className="document-fallback">
                       <ExternalLink size={34} />
-                      <strong>PDF preview is not available on this device.</strong>
+                      <strong>PDF Preview</strong>
                       <a className="primary-button" href={src} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Open PDF</a>
                     </div>
                   </object>
