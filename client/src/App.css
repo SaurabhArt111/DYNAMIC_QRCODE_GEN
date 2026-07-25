@@ -2,7 +2,7 @@
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 264px 1fr;
 }
 
 .sidebar {
@@ -12,26 +12,38 @@
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 20px 16px;
-  padding-top: calc(20px + var(--safe-top));
+  padding: 22px 16px;
+  padding-top: calc(22px + var(--safe-top));
   padding-left: calc(16px + var(--safe-left));
-  color: #f8fafc;
+  color: #f6ece4;
   background:
-    radial-gradient(420px 260px at 15% 0%, rgba(255, 255, 255, 0.1), transparent 65%),
-    linear-gradient(195deg, var(--primary-light) 0%, var(--primary) 38%, var(--primary-dark) 100%);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08), 8px 0 32px rgba(0, 0, 0, 0.14);
+    radial-gradient(460px 280px at 12% 0%, rgba(255, 255, 255, 0.08), transparent 65%),
+    linear-gradient(195deg, var(--primary-light) 0%, var(--primary) 42%, var(--primary-dark) 100%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08), 8px 0 32px rgba(0, 0, 0, 0.18);
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 800;
-  font-size: 1.05rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.1rem;
   letter-spacing: -0.01em;
-  padding: 4px 10px 18px;
-  margin-bottom: 10px;
+  padding: 4px 6px 20px;
+  margin-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  flex-shrink: 0;
 }
 
 .sidebar a,
@@ -43,10 +55,11 @@
   gap: 10px;
   border-radius: var(--radius-sm);
   padding: 0 12px 0 14px;
-  color: rgba(255, 255, 255, 0.68);
+  color: rgba(246, 236, 228, 0.68);
   border: 1px solid transparent;
   background: transparent;
   font-weight: 600;
+  font-size: 0.93rem;
   font-family: var(--font-sans);
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
@@ -58,7 +71,7 @@
 }
 
 .sidebar a.active {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.15);
   color: #fff;
   font-weight: 700;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -77,9 +90,9 @@
 }
 
 .main-panel {
-  padding: 28px;
-  padding-top: calc(28px + var(--safe-top));
-  padding-right: calc(28px + var(--safe-right));
+  padding: 30px;
+  padding-top: calc(30px + var(--safe-top));
+  padding-right: calc(30px + var(--safe-right));
   min-width: 0;
 }
 
@@ -89,8 +102,39 @@
   gap: 6px;
 }
 
-.logout-button {
+.theme-toggle-rail {
   margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  margin-bottom: 8px;
+}
+
+.theme-toggle-rail span {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 6px;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(246, 236, 228, 0.55);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.theme-toggle-rail span.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.logout-button {
+  margin-top: 0;
 }
 
 .mobile-bottom-nav {
@@ -133,7 +177,7 @@
       linear-gradient(0deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 60%),
       linear-gradient(200deg, var(--primary), var(--primary-dark));
 
-    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 
     z-index: 999;
   }
@@ -149,7 +193,7 @@
     gap: 4px;
 
     text-decoration: none;
-    color: rgba(255, 255, 255, 0.62);
+    color: rgba(246, 236, 228, 0.62);
 
     font-size: 11px;
     font-weight: 600;
@@ -172,6 +216,6 @@
 
 @media (min-width: 901px) and (max-width: 1180px) {
   .app-shell {
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: 224px 1fr;
   }
 }

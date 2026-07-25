@@ -1,11 +1,12 @@
 .not-found-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top, rgba(194, 65, 12, 0.12), transparent 30%),
-    linear-gradient(180deg, #faf4ee 0%, #f6f7f4 100%);
+    radial-gradient(700px 420px at 50% 0%, rgba(var(--primary-rgb), 0.12), transparent 60%),
+    var(--bg);
 }
 
 .not-found-panel {
@@ -15,24 +16,26 @@
   align-items: center;
   gap: 12px;
   text-align: center;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 28px;
+  background: var(--glass-shine), var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 34px 28px;
   box-shadow: var(--shadow);
 }
 
-.not-found-panel svg,
-.not-found-code {
+.not-found-panel svg {
   color: var(--primary);
 }
 
 .not-found-code {
   display: block;
-  font-size: clamp(5rem, 15vw, 8rem);
-  font-weight: 900;
+  font-family: var(--font-display);
+  font-size: clamp(4.5rem, 15vw, 7rem);
+  font-weight: 600;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #4A141B 0%, #4a1d14 100%);
+  background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -41,6 +44,7 @@
 
 .not-found-panel h1 {
   margin: 0;
+  font-size: 1.5rem;
 }
 
 .not-found-panel p {

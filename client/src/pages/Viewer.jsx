@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { AlertTriangle, Download, ExternalLink, Maximize, WifiOff } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Download, ExternalLink, Files, Maximize, WifiOff } from 'lucide-react';
 import { api, fileUrl, getErrorMessage } from '../api/http.js';
 import { formatBytes } from '../utils/format.js';
 import './Viewer.css';
@@ -89,6 +89,24 @@ export default function Viewer() {
     setActive(index);
   }
 
+  function step(delta) {
+    if (!vault?.uploads?.length) return;
+    const nextIndex = Math.min(Math.max(active + delta, 0), vault.uploads.length - 1);
+    selectFile(nextIndex);
+  }
+
+  // Keyboard left/right to switch files
+  useEffect(() => {
+    if (!vault?.uploads || vault.uploads.length < 2) return undefined;
+    function onKeyDown(event) {
+      if (event.key === 'ArrowRight') step(1);
+      if (event.key === 'ArrowLeft') step(-1);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, vault?.uploads?.length]);
+
   function onTouchStart(event) {
     if (vault?.uploads?.length < 2) return;
     const touch = event.touches[0];
@@ -166,16 +184,24 @@ export default function Viewer() {
     <main className="viewer-page">
       <header className="viewer-header">
         <h1 style={{ textTransform: 'capitalize' }}>{vault.qr.name}</h1>
+        {vault.uploads.length > 1 && (
+          <span className="viewer-header-count">
+            <Files size={13} /> File {active + 1} of {vault.uploads.length}
+          </span>
+        )}
       </header>
       <section className="viewer-layout">
-        <aside className="viewer-list">
-          {vault.uploads.map((item, index) => (
-            <button className={active === index ? 'active' : ''} key={item.id} onClick={() => selectFile(index)}>
-              <strong>File {index + 1}</strong>
-              <span>{item.originalName}</span>
-            </button>
-          ))}
-        </aside>
+        {vault.uploads.length > 1 && (
+          <aside className="viewer-list">
+            <p className="viewer-list-title">Files in this vault</p>
+            {vault.uploads.map((item, index) => (
+              <button className={active === index ? 'active' : ''} key={item.id} onClick={() => selectFile(index)}>
+                <strong>File {index + 1}</strong>
+                <span>{item.originalName}</span>
+              </button>
+            ))}
+          </aside>
+        )}
         <section className="viewer-content" onTouchStartCapture={onTouchStart} onTouchEndCapture={onTouchEnd}>
           {file ? (
             <>
@@ -190,6 +216,28 @@ export default function Viewer() {
                 </div>
               </div>
               <div className="viewer-stage" ref={contentRef}>
+                {vault.uploads.length > 1 && (
+                  <button
+                    type="button"
+                    className="stage-nav-arrow prev"
+                    onClick={() => step(-1)}
+                    disabled={active === 0}
+                    aria-label="Previous file"
+                  >
+                    <ChevronLeft size={22} />
+                  </button>
+                )}
+                {vault.uploads.length > 1 && (
+                  <button
+                    type="button"
+                    className="stage-nav-arrow next"
+                    onClick={() => step(1)}
+                    disabled={active === vault.uploads.length - 1}
+                    aria-label="Next file"
+                  >
+                    <ChevronRight size={22} />
+                  </button>
+                )}
                 {fileLoading && (
                   <div className="viewer-stage-loading">
                     <div className="loader-pulse" />
@@ -210,7 +258,7 @@ export default function Viewer() {
                   <object className="pdf-viewer-frame" data={src} type="application/pdf" onLoad={() => setFileLoading(false)}>
                     <div className="document-fallback">
                       <ExternalLink size={34} />
-                      <strong>PDF Preview</strong>
+                      <strong>PDF preview is not available on this device.</strong>
                       <a className="primary-button" href={src} target="_blank" rel="noreferrer"><ExternalLink size={18} /> Open PDF</a>
                     </div>
                   </object>
@@ -230,14 +278,40 @@ export default function Viewer() {
           )}
         </section>
       </section>
-      {/* mobile file navigation */}
+      {/* dot-button switcher — swipe left/right on the stage also switches files */}
       {vault.uploads.length > 1 && (
-        <nav className="mobile-file-nav">
-          {vault.uploads.map((item, index) => (
-            <button className={active === index ? 'active' : ''} key={item.id} onClick={() => selectFile(index)} aria-label={`Show file ${index + 1}`}>
-              <span className="mobile-file-dot" />
-            </button>
-          ))}
+        <nav className="viewer-switcher" aria-label="Switch file">
+          <button
+            type="button"
+            className="viewer-switcher-arrow"
+            onClick={() => step(-1)}
+            disabled={active === 0}
+            aria-label="Previous file"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="viewer-switcher-dots">
+            {vault.uploads.map((item, index) => (
+              <button
+                className={active === index ? 'active' : ''}
+                key={item.id}
+                onClick={() => selectFile(index)}
+                aria-label={`Show file ${index + 1}`}
+                aria-current={active === index}
+              >
+                <span className="viewer-dot" />
+              </button>
+            ))}
+          </span>
+          <button
+            type="button"
+            className="viewer-switcher-arrow"
+            onClick={() => step(1)}
+            disabled={active === vault.uploads.length - 1}
+            aria-label="Next file"
+          >
+            <ChevronRight size={16} />
+          </button>
         </nav>
       )}
     </main>

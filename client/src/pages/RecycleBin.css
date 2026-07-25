@@ -7,14 +7,15 @@
 .pin-panel {
   width: min(420px, 100%);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 24px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: 28px;
   box-shadow: var(--shadow);
 }
 
 .pin-panel h1 {
   margin: 0 0 8px;
+  font-size: 1.4rem;
 }
 
 .pin-panel p {
@@ -23,7 +24,7 @@
 }
 
 .recycle-toolbar {
-  padding: 16px;
+  padding: 18px;
   display: grid;
   gap: 12px;
 }
@@ -38,24 +39,21 @@
 
 .recycle-search {
   flex: 1 1 320px;
-}
-
-.recycle-search {
-  min-height: 40px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
+  padding: 0 13px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .recycle-search input {
   flex: 1;
   border: none;
   background: transparent;
-  min-height: 38px;
+  min-height: 40px;
   color: var(--text);
 }
 
@@ -72,25 +70,37 @@
 
 .recycle-row {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
   padding: 16px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 16px;
   align-items: center;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.recycle-row:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: rgba(var(--primary-rgb), 0.2);
 }
 
 .recycle-check {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   color: var(--muted);
   display: inline-grid;
   place-items: center;
   padding: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recycle-check:hover {
+  border-color: rgba(var(--primary-rgb), 0.4);
 }
 
 .recycle-item-copy {
@@ -103,7 +113,9 @@
 }
 
 .recycle-item-copy strong {
-  color: var(--primary-dark);
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 .recycle-item-copy span b {
@@ -113,15 +125,16 @@
 .recycle-row span {
   margin-top: 4px;
   color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .recycle-empty {
   margin: 0;
-  padding: 28px;
+  padding: 30px;
   text-align: center;
   background: var(--surface);
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--muted);
 }
 
@@ -129,7 +142,7 @@
 .recycle-row-skeleton span {
   display: block;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--surface-2), #fff, var(--surface-2));
+  background: linear-gradient(90deg, var(--surface-2), var(--surface), var(--surface-2));
   background-size: 220% 100%;
   animation: recycleSkeleton 1.2s ease-in-out infinite;
 }
@@ -140,9 +153,9 @@
 }
 
 .recycle-row-skeleton .recycle-select-cell span {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
 }
 
 .recycle-row-skeleton div:nth-child(2) span {
@@ -154,7 +167,7 @@
   width: 96px;
   height: 40px;
   margin-top: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 @keyframes recycleSkeleton {

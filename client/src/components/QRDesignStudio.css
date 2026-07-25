@@ -27,7 +27,7 @@
 .qds-preview-canvas {
   aspect-ratio: 1 / 1;
   width: 100%;
-  background: var(--surface-2);
+  background: #fbf6ee;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 16px;
@@ -74,7 +74,7 @@
 
 .qds-tab.is-active {
   background: var(--primary);
-  color: #fff;
+  color: #fbf5ee;
 }
 
 .qds-tab-panel {

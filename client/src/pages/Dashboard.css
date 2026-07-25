@@ -1,7 +1,7 @@
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(150px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .metric-grid-4 {
@@ -9,39 +9,51 @@
 }
 
 .metric-card {
+  position: relative;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 18px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
   display: grid;
-  gap: 10px;
-  box-shadow: var(--shadow);
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
 }
 
 .metric-card svg {
-  color: var(--text);
+  color: var(--primary);
 }
 
 .metric-card span {
   color: var(--muted);
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.84rem;
+  font-weight: 600;
 }
 
 .metric-card strong {
-  font-size: 1.65rem;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 600;
 }
 
 .activity-panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 20px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
 }
 
 .activity-panel h2 {
-  margin: 0 0 14px;
-  font-size: 1.1rem;
+  margin: 0 0 16px;
+  font-size: 1.12rem;
+  font-weight: 600;
 }
 
 .activity-list {
@@ -54,23 +66,27 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px;
+  padding: 13px 14px;
   background: var(--surface-2);
-  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
 }
 
 .activity-item-info {
   display: grid;
-  gap: 4px;
+  gap: 5px;
 }
 
 .activity-item-info strong {
   font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
 }
 
 .activity-time {
   color: var(--muted);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
   white-space: nowrap;
 }
 
@@ -83,36 +99,37 @@
 
 .activity-badge {
   display: inline-block;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 20px;
   width: fit-content;
+  letter-spacing: 0.01em;
 }
 
 .action-QR_CREATED {
-  background: #d1fae5;
-  color: #065f46;
+  background: color-mix(in srgb, var(--success) 16%, var(--surface));
+  color: var(--success);
 }
 
 .action-QR_MODIFIED {
-  background: #dbeafe;
-  color: #1e40af;
+  background: color-mix(in srgb, var(--info) 16%, var(--surface));
+  color: var(--info);
 }
 
 .action-QR_DELETED {
-  background: #fef3c7;
-  color: #92400e;
+  background: color-mix(in srgb, var(--warning) 18%, var(--surface));
+  color: var(--warning);
 }
 
 .action-QR_RESTORED {
-  background: #ede9fe;
-  color: #5b21b6;
+  background: color-mix(in srgb, var(--accent) 20%, var(--surface));
+  color: var(--accent);
 }
 
 .action-QR_PURGED {
-  background: #fee2e2;
-  color: #991b1b;
+  background: color-mix(in srgb, var(--danger) 16%, var(--surface));
+  color: var(--danger);
 }
 
 @media (max-width: 1100px) {
@@ -135,6 +152,6 @@
   }
 
   .activity-time {
-    font-size: 0.78rem;
+    font-size: 0.76rem;
   }
 }

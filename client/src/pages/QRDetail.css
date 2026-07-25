@@ -6,15 +6,16 @@
 
 .detail-panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: var(--shadow);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
 }
 
 .detail-panel h2 {
   margin: 0 0 16px;
-  font-size: 1.05rem;
+  font-size: 1.08rem;
+  font-weight: 600;
 }
 
 .qr-detail-preview {
@@ -22,8 +23,8 @@
   width: 100%;
   max-width: 220px;
   margin: 0 auto 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: #fbf6ee;
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-md);
   padding: 12px;
   display: grid;
@@ -32,16 +33,17 @@
 
 .qr-detail-design-tag {
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--muted);
   margin: 0 0 20px;
+  font-family: var(--font-mono);
 }
 
 .meta-list,
 .meta-list div {
   display: grid;
-  gap: 8px;
+  gap: 9px;
 }
 
 .meta-list {
@@ -54,11 +56,14 @@
 
 .meta-list dt {
   color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .meta-list dd {
   margin: 0;
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
 }
 
 /* File management section */
@@ -71,7 +76,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .files-head h2 {
@@ -79,7 +84,7 @@
 }
 
 .file-count {
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   color: var(--muted);
   font-weight: 600;
 }
@@ -87,8 +92,8 @@
 /* Drop zone */
 .drop-zone {
   border: 2px dashed var(--border);
-  border-radius: 10px;
-  padding: 32px 24px;
+  border-radius: var(--radius-md);
+  padding: 34px 24px;
   display: grid;
   place-items: center;
   gap: 12px;
@@ -100,7 +105,7 @@
 
 .drop-zone:hover {
   border-color: var(--primary);
-  background: linear-gradient(135deg, var(--surface-2) 0%, color-mix(in srgb, var(--primary) 8%, white) 100%);
+  background: color-mix(in srgb, var(--primary) 7%, var(--surface-2));
 }
 
 .drop-zone:active {
@@ -141,7 +146,7 @@
 
 .queue-section {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 12px;
   background: var(--surface-2);
   display: grid;
@@ -149,11 +154,11 @@
 }
 
 .queue-title {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
   color: var(--muted);
-  letter-spacing: 0.4px;
+  letter-spacing: 0.06em;
 }
 
 .queued-file {
@@ -163,8 +168,8 @@
   gap: 10px;
   padding: 10px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-xs);
   min-width: 0;
 }
 
@@ -190,22 +195,22 @@
 
 .remove-btn {
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: transparent;
   cursor: pointer;
   display: grid;
   place-items: center;
   color: var(--muted);
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease;
   padding: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .remove-btn:hover {
-  color: var(--text);
-  background: var(--border);
+  color: var(--danger);
+  background: rgba(var(--danger-rgb), 0.1);
 }
 
 .upload-btn {
@@ -221,8 +226,8 @@
   align-items: center;
   gap: 14px;
   padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -233,7 +238,7 @@
 .file-row.dragging {
   opacity: 0.58;
   border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 4%, var(--surface));
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
 }
 
 .file-title {
@@ -281,48 +286,18 @@
   flex: 0 0 auto;
 }
 
-.icon-button {
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  display: inline-grid;
-  place-items: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: var(--muted);
-  padding: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.icon-button:hover:not(:disabled) {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.icon-button:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.icon-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.icon-button.danger:hover:not(:disabled) {
-  background: #ef4444;
-  color: white;
-  border-color: #ef4444;
+.file-actions .icon-button {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
 }
 
 /* Empty state */
 .empty-files {
   border: 1px dashed var(--border);
-  border-radius: 8px;
-  padding: 24px;
+  border-radius: var(--radius-sm);
+  padding: 26px;
   color: var(--muted);
   display: grid;
   gap: 6px;
@@ -340,7 +315,7 @@
 
 /* Loading skeleton */
 .file-skeleton {
-  background: linear-gradient(90deg, #f4f7f5, #fff, #f4f7f5);
+  background: linear-gradient(90deg, var(--surface-2), var(--surface), var(--surface-2));
   background-size: 220% 100%;
   animation: skeletonPulse 1.15s ease-in-out infinite;
   border-color: transparent;
@@ -399,10 +374,10 @@
 }
 
 .col-pdf-tag {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   background: var(--primary);
-  color: white;
-  padding: 2px 7px;
+  color: #fbf3ec;
+  padding: 2px 8px;
   border-radius: 20px;
 }

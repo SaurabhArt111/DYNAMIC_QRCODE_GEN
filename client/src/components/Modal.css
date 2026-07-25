@@ -1,7 +1,7 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(10, 15, 30, 0.5);
+  background: rgba(20, 14, 10, 0.5);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: grid;
@@ -30,15 +30,13 @@
   overflow-x: hidden;
   overflow-y: auto;
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 30%),
-    var(--glass-bg-strong);
+  background: var(--glass-shine), var(--glass-bg-strong);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 24px 90px rgba(6, 12, 28, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  padding: 22px;
+  box-shadow: 0 24px 90px rgba(20, 14, 10, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  padding: 24px;
   display: flex;
   flex-direction: column;
   animation: modal-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);

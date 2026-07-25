@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { BarChart3, FolderOpen, LogOut, QrCode, Recycle, Settings } from 'lucide-react';
+import { BarChart3, FolderOpen, LogOut, Moon, QrCode, Recycle, Settings, Sun } from 'lucide-react';
 import { useAuth } from './context/AuthContext.jsx';
+import { useTheme } from './context/ThemeContext.jsx';
 import { routes } from './routes/paths.js';
 import './App.css';
 
@@ -8,6 +9,7 @@ const appName = import.meta.env.VITE_APP_NAME || 'DynamicVault QR';
 
 export default function App() {
   const { logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -19,7 +21,7 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <QrCode size={30} />
+          <span className="brand-mark"><QrCode size={18} /></span>
           <span>{appName}</span>
         </div>
         <nav className="nav-links desktop-nav">
@@ -29,6 +31,15 @@ export default function App() {
           <NavLink to={routes.recycleBin}><Recycle size={18} /><span>Recycle Bin</span></NavLink>
           <NavLink to={routes.settings}><Settings size={18} /><span>Settings</span></NavLink>
         </nav>
+        <button
+          type="button"
+          className="theme-toggle-rail"
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+        >
+          <span className={theme === 'linen' ? 'active' : ''}><Sun size={14} /> Linen</span>
+          <span className={theme === 'dark' ? 'active' : ''}><Moon size={14} /> Dark</span>
+        </button>
         <button className="logout-button" onClick={handleLogout}><LogOut size={18} /> Logout</button>
       </aside>
       <main className="main-panel">

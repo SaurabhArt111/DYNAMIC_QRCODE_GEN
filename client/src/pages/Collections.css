@@ -1,17 +1,24 @@
 .col-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .col-card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
   display: grid;
-  gap: 10px;
-  box-shadow: var(--shadow);
+  gap: 11px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.col-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  border-color: rgba(var(--primary-rgb), 0.22);
 }
 
 .col-card-header {
@@ -21,28 +28,33 @@
 }
 
 .col-icon {
-  color: var(--text);
+  color: var(--primary);
+  flex-shrink: 0;
 }
 
 .col-card-header strong {
-  font-size: 1.05rem;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 600;
 }
 
 .col-desc {
   margin: 0;
   font-size: 0.88rem;
   color: var(--muted);
+  line-height: 1.5;
 }
 
 .col-meta {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--muted);
+  font-family: var(--font-mono);
 }
 
 .col-stats {
   font-size: 0.82rem;
-  color: var(--muted);
-  font-weight: 700;
+  color: var(--text);
+  font-weight: 600;
 }
 
 .col-pdf-badge {
@@ -50,9 +62,9 @@
   align-items: center;
   gap: 6px;
   background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 10px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-xs);
+  padding: 7px 10px;
   font-size: 0.82rem;
   color: var(--text);
 }
@@ -66,6 +78,8 @@
   margin-left: auto;
   color: var(--muted);
   white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
 }
 
 .col-pdf-none {
@@ -77,8 +91,8 @@
 .col-empty {
   grid-column: 1 / -1;
   border: 1px dashed var(--border);
-  border-radius: 8px;
-  padding: 32px;
+  border-radius: var(--radius-md);
+  padding: 40px;
   text-align: center;
   color: var(--muted);
   background: var(--surface);
@@ -92,8 +106,8 @@
 .col-card-skeleton p,
 .col-card-skeleton div {
   min-height: 18px;
-  border-radius: 8px;
-  background: linear-gradient(90deg, #f1f5f3, #fff, #f1f5f3);
+  border-radius: var(--radius-xs);
+  background: linear-gradient(90deg, var(--surface-2), var(--surface), var(--surface-2));
   background-size: 220% 100%;
   animation: qrSkeleton 1.15s ease-in-out infinite;
 }
@@ -108,6 +122,11 @@
 
 .col-card-skeleton div {
   min-height: 36px;
+}
+
+@keyframes qrSkeleton {
+  0% { background-position: 200% 0; }
+  100% { background-position: -20% 0; }
 }
 
 .modal-form {
@@ -125,9 +144,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 9px 10px;
   background: var(--surface-2);
-  border-radius: 6px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-xs);
   font-size: 0.84rem;
   margin-bottom: 6px;
 }
@@ -147,7 +167,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--danger, #dc2626);
+  color: var(--danger);
   font-size: 0.82rem;
   font-weight: 700;
   padding: 2px 4px;

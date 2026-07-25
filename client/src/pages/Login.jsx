@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
-import { Lock, LogIn, QrCode } from 'lucide-react';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
+import { ArrowLeft, Lock, LogIn, QrCode, ShieldCheck } from 'lucide-react';
 import { api } from '../api/http.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { routes } from '../routes/paths.js';
@@ -50,13 +50,26 @@ export default function Login() {
 
   return (
     <main className="login-page">
+      <div className="login-side" aria-hidden="true">
+        <div className="login-side-content">
+          <span className="login-side-mark"><QrCode size={22} /></span>
+          <h2>The control room for every scan.</h2>
+          <p>Collections, dynamic QR codes, and a governed recycle bin — all behind one secure sign-in.</p>
+          <div className="login-side-badge"><ShieldCheck size={15} /> JWT protected session</div>
+        </div>
+      </div>
+
       <form className="login-panel" onSubmit={submit}>
+        <Link to={routes.landing} className="login-back-link">
+          <ArrowLeft size={14} /> Back to home
+        </Link>
+
         <div className="login-brand">
-          <QrCode size={34} />
+          <QrCode size={22} />
           <span>{appName}</span>
         </div>
 
-        <h1>Admin Login</h1>
+        <h1>Admin login</h1>
         <p>Secure access for the organization administrator.</p>
 
         {error && (

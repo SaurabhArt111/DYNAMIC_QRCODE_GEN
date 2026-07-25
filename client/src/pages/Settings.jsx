@@ -143,11 +143,17 @@ export default function Settings() {
               <button
                 type="button"
                 key={option.id}
+                data-theme-id={option.id}
                 className={`theme-card ${theme === option.id ? 'active' : ''}`}
                 onClick={() => setTheme(option.id)}
               >
+                <span className="theme-card-swatch" aria-hidden="true">
+                  <i className="swatch-bg" />
+                  <i className="swatch-primary" />
+                  <i className="swatch-accent" />
+                </span>
                 <strong>{option.label}</strong>
-                <span>{theme === option.id ? 'Active workspace theme' : 'Apply theme'}</span>
+                <span>{theme === option.id ? 'Active workspace theme' : option.description}</span>
               </button>
             ))}
           </div>
