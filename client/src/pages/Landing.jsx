@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   FolderTree,
@@ -6,13 +7,16 @@ import {
   History,
   Layers,
   Lock,
+  Moon,
   QrCode,
   Recycle,
   ScanLine,
   ShieldCheck,
   Smartphone,
-  Sparkles
+  Sparkles,
+  Sun
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext.jsx';
 import { routes } from '../routes/paths.js';
 import './Landing.css';
 
@@ -78,6 +82,8 @@ const stats = [
 ];
 
 export default function Landing() {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <main className="landing-page">
       <div className="landing-glow" aria-hidden="true" />
@@ -92,6 +98,15 @@ export default function Landing() {
             <a href="#parts">Parts</a>
             <a href="#how-it-works">How it works</a>
             <a href="#use-cases">Use cases</a>
+            <button
+              type="button"
+              className="theme-toggle-rail"
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+            >
+              <span className={theme === 'linen' ? 'active' : ''}><Sun size={14} /> Linen</span>
+              <span className={theme === 'dark' ? 'active' : ''}><Moon size={14} /> Dark</span>
+            </button>
           </nav>
         </div>
       </header>

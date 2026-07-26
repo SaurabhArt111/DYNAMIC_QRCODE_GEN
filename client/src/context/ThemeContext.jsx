@@ -17,7 +17,7 @@ function systemPreference() {
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return defaultTheme;
-    return localStorage.getItem(storageKey) || systemPreference();
+    return localStorage.getItem(storageKey) || defaultTheme;
   });
 
   useEffect(() => {

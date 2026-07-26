@@ -124,13 +124,13 @@
   border-radius: 7px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: rgba(246, 236, 228, 0.55);
+  color: var(--muted);
   transition: background 0.2s ease, color 0.2s ease;
 }
 
 .theme-toggle-rail span.active {
   background: rgba(255, 255, 255, 0.16);
-  color: #fff;
+  color: var(--primary);
 }
 
 .logout-button {
