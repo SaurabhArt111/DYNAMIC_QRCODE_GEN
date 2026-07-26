@@ -109,9 +109,10 @@
   gap: 2px;
   padding: 3px;
   border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(255, 255, 255, 0.21);
   border: 1px solid rgba(255, 255, 255, 0.12);
   margin-bottom: 8px;
+  box-shadow: 0 4px 5px rgba(0, 0, 0, 0.12);
 }
 
 .theme-toggle-rail span {
@@ -124,13 +125,13 @@
   border-radius: 7px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--text);
   transition: background 0.2s ease, color 0.2s ease;
 }
 
 .theme-toggle-rail span.active {
   background: rgba(255, 255, 255, 0.16);
-  color: var(--primary);
+  color: var(--text);
 }
 
 .logout-button {
